@@ -1,0 +1,35 @@
+name: Backend
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_USER: medtrack
+          POSTGRES_PASSWORD: ci-only-fictional-password
+          POSTGRES_DB: medtrack_test
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U medtrack -d medtrack_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      POSTGRES_USER: medtrack
+      POSTGRES_PASSWORD: ci-only-fictional-password
+      TEST_DB_URL: jdbc:postgresql://localhost:5433/medtrack_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+      - name: Build, integration tests and formatting
+        working-directory: backend
+        run: ./mvnw --batch-mode verify
