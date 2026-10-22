@@ -2,6 +2,8 @@ package com.medtrack;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.medtrack.auth.AuthDtos;
+import com.medtrack.auth.AuthService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import java.net.URI;
@@ -10,6 +12,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.UUID;
 import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,6 +21,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.bind.annotation.*;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -27,9 +31,20 @@ import tools.jackson.databind.ObjectMapper;
     properties = {
       "spring.datasource.url=${TEST_DB_URL:jdbc:postgresql://localhost:5433/medtrack_test}"
     })
+@ActiveProfiles("test")
 @Import(MedTrackApplicationTests.Fixtures.class)
 class MedTrackApplicationTests {
   @LocalServerPort int port;
+  @Autowired AuthService auth;
+  String bearer;
+
+  @BeforeEach
+  void authenticate() {
+    String email = UUID.randomUUID() + "@example.invalid";
+    auth.register(new AuthDtos.Register(email, "fictional-password-123", "Europe/Istanbul"));
+    bearer = auth.login(new AuthDtos.Login(email, "fictional-password-123")).accessToken();
+  }
+
   @Autowired JdbcTemplate jdbc;
   @Autowired Flyway flyway;
   private final HttpClient client = HttpClient.newHttpClient();
@@ -39,6 +54,7 @@ class MedTrackApplicationTests {
     return client.send(
         HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
             .header("Content-Type", "application/json")
+            .header("Authorization", "Bearer " + bearer)
             .method(
                 method,
                 body == null
@@ -67,7 +83,7 @@ class MedTrackApplicationTests {
             "select count(*) from information_schema.tables where table_name = 'users' and table_schema = 'public'",
             Integer.class));
     assertEquals(
-        1,
+        2,
         jdbc.queryForObject(
             "select count(*) from flyway_schema_history where success = true", Integer.class));
   }

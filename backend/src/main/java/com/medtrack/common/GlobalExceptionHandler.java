@@ -51,6 +51,28 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         error(code, "Request could not be processed", request, Map.of()), headers, status);
   }
 
+  @ExceptionHandler(ApiException.class)
+  public ResponseEntity<ApiError> api(ApiException ex, HttpServletRequest request) {
+    return ResponseEntity.status(ex.status())
+        .body(
+            new ApiError(
+                ex.code(),
+                ex.getMessage(),
+                (String) request.getAttribute(RequestIdFilter.ATTRIBUTE),
+                ex.fields()));
+  }
+
+  @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+  public ResponseEntity<ApiError> conflict(HttpServletRequest request) {
+    return ResponseEntity.status(409)
+        .body(
+            new ApiError(
+                "RESOURCE_CONFLICT",
+                "Resource already exists or conflicts",
+                (String) request.getAttribute(RequestIdFilter.ATTRIBUTE),
+                Map.of()));
+  }
+
   @ExceptionHandler(Exception.class)
   public ResponseEntity<ApiError> unexpected(Exception ex, HttpServletRequest request) {
     // No exception message, stack trace, URL, body or medication data in logs.
