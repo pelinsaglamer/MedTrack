@@ -15,17 +15,23 @@ public class MedicationService {
   private final MedicationRepository medications;
   private final CurrentUser current;
   private final Clock clock;
+  private final com.medtrack.schedules.ScheduleRepository versions;
+  private final com.medtrack.inventory.InventoryStore inventory;
   private final com.medtrack.schedules.ScheduleLifecycle schedules;
 
   public MedicationService(
       MedicationRepository medications,
       CurrentUser current,
       Clock clock,
-      com.medtrack.schedules.ScheduleLifecycle schedules) {
+      com.medtrack.schedules.ScheduleLifecycle schedules,
+      com.medtrack.inventory.InventoryStore inventory,
+      com.medtrack.schedules.ScheduleRepository versions) {
     this.medications = medications;
     this.current = current;
     this.clock = clock;
     this.schedules = schedules;
+    this.inventory = inventory;
+    this.versions = versions;
   }
 
   @Transactional
@@ -38,7 +44,9 @@ public class MedicationService {
             clean(input.unit(), "unit"),
             input.initialStock(),
             clock.instant());
-    return MedicationDtos.View.from(medications.saveAndFlush(medication));
+    medication = medications.saveAndFlush(medication);
+    inventory.initialize(medication);
+    return MedicationDtos.View.from(medication);
   }
 
   @Transactional(readOnly = true)
@@ -71,7 +79,18 @@ public class MedicationService {
     if (Boolean.FALSE.equals(input.archived()))
       throw invalid("archived", "Only archiving is supported");
     if (input.name() != null) medication.rename(clean(input.name(), "name"));
-    if (input.unit() != null) medication.changeUnit(clean(input.unit(), "unit"));
+    if (input.unit() != null) {
+      String unit = clean(input.unit(), "unit");
+      if (!unit.equals(medication.unit())
+          && (medication.initialStock() != null
+              || inventory.hasMovements(id)
+              || !versions.findByMedicationIdOrderByVersionAsc(id).isEmpty()))
+        throw new ApiException(
+            HttpStatus.CONFLICT,
+            "MEDICATION_UNIT_LOCKED",
+            "Unit cannot change after stock or schedule history; create a separate medication");
+      medication.changeUnit(unit);
+    }
     if (Boolean.TRUE.equals(input.archived())) {
       medication.archive(clock.instant());
       schedules.stopAt(id, medication.archivedAt(), medication.archivedAt());

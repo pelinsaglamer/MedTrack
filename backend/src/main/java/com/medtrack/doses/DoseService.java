@@ -20,6 +20,7 @@ public class DoseService {
   private final UserRepository users;
   private final CurrentUser current;
   private final Clock clock;
+  private final DoseStateService states;
 
   public DoseService(
       MedicationRepository medications,
@@ -28,7 +29,8 @@ public class DoseService {
       DoseStore doses,
       UserRepository users,
       CurrentUser current,
-      Clock clock) {
+      Clock clock,
+      DoseStateService states) {
     this.medications = medications;
     this.schedules = schedules;
     this.generator = generator;
@@ -36,6 +38,7 @@ public class DoseService {
     this.users = users;
     this.current = current;
     this.clock = clock;
+    this.states = states;
   }
 
   @Transactional
@@ -52,7 +55,8 @@ public class DoseService {
           "Date exceeds supported horizon",
           Map.of("date", "Use a past date or the next 14 days"));
     // Lock in UUID order, same order for all concurrent daily reads.
-    for (var id : medications.findOwnerIds(owner)) {
+    var medicationIds = medications.findOwnerIds(owner);
+    for (var id : medicationIds) {
       var medication = medications.findOwnedForUpdate(id, owner).orElseThrow();
       for (var schedule : schedules.findByMedicationIdOrderByVersionAsc(id)) {
         generator.generate(
@@ -68,6 +72,36 @@ public class DoseService {
               date.plusDays(1).atStartOfDay(zone).toInstant());
       }
     }
+    for (var id : medicationIds) states.refresh(id, now);
     return doses.list(owner, date, zone, page, size, now);
+  }
+
+  @Transactional
+  public DoseDtos.WeeklySummary summary(LocalDate requested) {
+    var owner = current.id();
+    ZoneId zone = ZoneId.of(users.findById(owner).orElseThrow().timezone());
+    Instant now = clock.instant();
+    LocalDate today = now.atZone(zone).toLocalDate();
+    LocalDate start = requested == null ? today.with(java.time.DayOfWeek.MONDAY) : requested;
+    if (start.getYear() < 1
+        || start.getDayOfWeek() != java.time.DayOfWeek.MONDAY
+        || start.isAfter(today))
+      throw new ApiException(
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          "VALIDATION_ERROR",
+          "weekStart must be a current or past Monday");
+    var ids = medications.findOwnerIds(owner);
+    for (var id : ids) {
+      var med = medications.findOwnedForUpdate(id, owner).orElseThrow();
+      for (var schedule : schedules.findByMedicationIdOrderByVersionAsc(id)) {
+        generator.generate(
+            med,
+            schedule,
+            start.atStartOfDay(zone).toInstant(),
+            start.plusDays(7).atStartOfDay(zone).toInstant());
+      }
+      states.refresh(id, now);
+    }
+    return doses.summary(owner, start, zone, now);
   }
 }

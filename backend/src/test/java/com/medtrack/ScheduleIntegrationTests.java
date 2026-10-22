@@ -334,7 +334,7 @@ class ScheduleIntegrationTests {
   }
 
   @Test
-  void rollingHorizonExtendsAndHistoryDoesNotInventTakenOrMissed() throws Exception {
+  void rollingHorizonExtendsAndPastUnconfirmedDoseBecomesMissedAtNextSlot() throws Exception {
     String med = medication();
     schedule(med, plan("2026-10-22", null, "Europe/Istanbul", List.of("09:00")));
     assertEquals(14, count(med));
@@ -342,7 +342,7 @@ class ScheduleIntegrationTests {
     token = auth.login(new AuthDtos.Login(email, "fictional-password-123")).accessToken();
     assertEquals(1, day("2026-11-06").get("totalElements").asInt());
     assertEquals(16, count(med));
-    assertEquals("DUE", day("2026-10-22").get("content").get(0).get("status").asText());
+    assertEquals("MISSED", day("2026-10-22").get("content").get(0).get("status").asText());
   }
 
   @Test
@@ -415,13 +415,7 @@ class ScheduleIntegrationTests {
     schedule(med, plan("2026-10-22", null, "Europe/Istanbul", List.of("09:00")));
     var before = day("2026-10-22");
     String privateName = "Fictional Private " + UUID.randomUUID();
-    node(
-        call(
-            "PATCH",
-            "/api/v1/medications/" + med,
-            Map.of("name", privateName, "unit", "capsule"),
-            token),
-        200);
+    node(call("PATCH", "/api/v1/medications/" + med, Map.of("name", privateName), token), 200);
     assertEquals(before, day("2026-10-22"));
     assertFalse(output.getAll().contains(privateName));
   }
@@ -448,6 +442,66 @@ class ScheduleIntegrationTests {
                     UUID.randomUUID(),
                     UUID.fromString(med)));
     assertEquals("23505", ((java.sql.SQLException) duplicate.getMostSpecificCause()).getSQLState());
+  }
+
+  private void relogin() {
+    token = auth.login(new AuthDtos.Login(email, "fictional-password-123")).accessToken();
+  }
+
+  @Test
+  void missedStartsAtNextDoseOfTheSameMedicationWithoutStockChange() throws Exception {
+    String med = medication();
+    schedule(med, plan("2026-10-22", null, "Europe/Istanbul", List.of("09:00", "21:00")));
+    clock.now = Instant.parse("2026-10-22T17:59:59Z");
+    relogin();
+    assertEquals("DUE", day("2026-10-22").get("content").get(0).get("status").asText());
+    clock.now = Instant.parse("2026-10-22T18:00:00Z");
+    relogin();
+    var doses = day("2026-10-22").get("content");
+    assertEquals("MISSED", doses.get(0).get("status").asText());
+    assertEquals("2026-10-22T18:00:00Z", doses.get(0).get("missedAt").asText());
+    assertEquals("DUE", doses.get(1).get("status").asText());
+    assertEquals(
+        0,
+        jdbc.queryForObject(
+            "select count(*) from dose_actions where medication_id=?",
+            Integer.class,
+            UUID.fromString(med)));
+    assertEquals(
+        0,
+        new java.math.BigDecimal("30")
+            .compareTo(
+                jdbc.queryForObject(
+                    "select quantity from inventory_snapshot where medication_id=?",
+                    java.math.BigDecimal.class,
+                    UUID.fromString(med))));
+  }
+
+  @Test
+  void finiteLastDoseStaysUnconfirmedWithoutInventingADeadline() throws Exception {
+    String med = medication();
+    schedule(med, plan("2026-10-22", "2026-10-22", "Europe/Istanbul", List.of("09:00")));
+    clock.now = Instant.parse("2026-10-25T12:00:00Z");
+    relogin();
+    var dose = day("2026-10-22").get("content").get(0);
+    assertEquals("DUE", dose.get("status").asText());
+    assertTrue(dose.get("missedAt").isNull());
+  }
+
+  @Test
+  void missedDeadlineFollowsTwentyFiveHourDstDay() throws Exception {
+    clock.now = Instant.parse("2026-10-24T12:00:00Z");
+    token = login("Europe/Berlin");
+    String med = medication();
+    schedule(med, plan("2026-10-25", null, "Europe/Berlin", List.of("02:30")));
+    clock.now = Instant.parse("2026-10-26T01:29:59Z");
+    relogin();
+    assertEquals("DUE", day("2026-10-25").get("content").get(0).get("status").asText());
+    clock.now = Instant.parse("2026-10-26T01:30:00Z");
+    relogin();
+    var dose = day("2026-10-25").get("content").get(0);
+    assertEquals("MISSED", dose.get("status").asText());
+    assertEquals("2026-10-26T01:30:00Z", dose.get("missedAt").asText());
   }
 
   @TestConfiguration

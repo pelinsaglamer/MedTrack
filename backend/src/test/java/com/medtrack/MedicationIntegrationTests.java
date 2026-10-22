@@ -208,9 +208,10 @@ class MedicationIntegrationTests {
     assertEquals("tablet", changed.get("unit").asText());
     assertEquals("30", changed.get("initialStock").asText());
     assertEquals(item.get("createdAt"), changed.get("createdAt"));
-    changed = node(call("PATCH", path(item), Map.of("unit", "capsule"), access), 200);
-    assertEquals("capsule", changed.get("unit").asText());
-    assertEquals("Fictional Updated", changed.get("name").asText());
+    error(
+        call("PATCH", path(item), Map.of("unit", "capsule"), access),
+        409,
+        "MEDICATION_UNIT_LOCKED");
   }
 
   @Test
@@ -279,7 +280,14 @@ class MedicationIntegrationTests {
 
   @Test
   void concurrentPartialUpdatesPreserveBothChanges() throws Exception {
-    var item = create("Fictional Concurrent");
+    var item =
+        node(
+            call(
+                "POST",
+                "/api/v1/medications",
+                Map.of("name", "Fictional Concurrent", "unit", "tablet"),
+                access),
+            201);
     String token = access;
     try (var pool = Executors.newFixedThreadPool(2)) {
       var gate = new CountDownLatch(1);

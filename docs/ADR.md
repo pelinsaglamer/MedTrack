@@ -15,7 +15,7 @@ Kaynak: SRS v1.0, §6.2 ve Appendix B. 22 Ekim 2026. SRS'deki ADR numaraları ko
 | BUILD-01 Maven | Kullanıcı onayladı | 22 Ekim 2026; Java 21 + Maven Wrapper |
 | MOBILE-01 State management | Açık | Riverpod Phase 6 öncesi onaylanacak |
 | AUTH-01 JWT + rotated refresh | Phase 2 uygulandı | SRS §6.1/11 modeli; rotasyon, replay ve logout testleri |
-| DOSE-01 UNDO | SRS önerisi | Phase 5 öncesi compensating entry semantiği netleştirilecek |
+| DOSE-01 UNDO | Kullanıcı onayladı / Phase 5 uygulandı | Son action için compensating entry; immutable audit |
 | PRIVACY-01 Silme/retention | Açık | Gerçek kullanıcı pilotundan önce politika ve erasure |
 
 ## Phase 1 uygulama kararları
@@ -90,3 +90,22 @@ Kaynak: FR-004/005/012/014, BR-01/03, §7/8/10.1/13 ve AC-01/06/08'in backend pl
 - UTC timestamp'ler PostgreSQL micro precision ile saklanır. Eski Flyway migration'ları değiştirilmedi.
 
 Referanslar: [Java ZonedDateTime](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/time/ZonedDateTime.html), [PostgreSQL range exclusions](https://www.postgresql.org/docs/17/rangetypes.html#RANGETYPES-CONSTRAINT).
+
+## Phase 5 — onaylı dose actions / inventory / weekly summary
+
+Kaynak: FR-006/009/010/014, BR-01/02/04, SRS §7/8/10/13 ve [onaylı ek](SRS-addendum-phase-5.md) FR-003-A/FR-019. Kullanıcı UNDO, birim koruması ve bu fazda haftalık özeti açıkça onayladı. MISSED eşiği aynı ilacın sonraki planlı dozudur.
+
+- V5 action/operation registry, append-only inventory ledger, nullable inventory snapshot ve occurrence revision; V6 missed_at. V1–V4 değiştirilmedi. Eski bilinen initialStock bir kez OPENING'e taşınır; unknown için opening yoktur. Yeni medication aynı transaction'da snapshot/opening oluşturur.
+- Global operation UUID insert + row lock, sonra owner-scoped medication lock. Canonical request fingerprint; farklı owner/target/body 409 IDEMPOTENCY_KEY_REUSED. Replay, arada stok değişse bile ilk event/balance yanıtını döndürür. İstemci eski sürümlü yanıtı güncel durum sanmamalı; gerektiğinde güncel read ile uzlaşmalı.
+- Action audit, consumption/compensation, snapshot version, occurrence state/version ve kayıtlı response tek transaction'dır. Typed hata da tüm yazımları geri alır. Aynı dozda iki farklı TAKEN anahtarından yalnız biri başarılı olabilir.
+- Snapshot optimistic revision SQL WHERE version kontrolüyle korunur, ayrıca JPA @Version modeli vardır. Med row lock farklı dozların aynı stoku yarışarak azaltmasını da serileştirir.
+- Decimal miktarlar korunur. Stock/ledger NUMERIC(30,6); tek input NUMERIC(19,6) sınırları. Bilinen snapshot ledger toplamıdır; unknown hareketler audit edilir ama quantity null kalır. CORRECTION mutlak nonnegative gözlenen stoktur; delta = target - ledger sum ve known=true olur. RESTOCK pozitif ektir.
+- TAKEN due/past teyitsiz dozda tüketim üretir; stok yetersizliği engel değildir (STOCK_NEGATIVE). SKIPPED delta 0. Future dose action 409; recordedAt gelecekteyse 422. Optional expectedVersion stale intent'i reddeder.
+- UNDO yalnız observed son TAKEN/SKIPPED action ID'sini hedefler. İlk debit'in tam tersi yazılır; güncel stok miktarına veya yeni schedule quantity'ye göre tahmin yapılmaz. Eski action/ledger silinmez. Repeated undo farklı key ile 409; exact replay ek iade yapmaz. Yeni TAKEN daha sonra mümkündür.
+- Action/ledger UPDATE/DELETE DB trigger'larıyla korunur; account/med parent erasure cascade'i mümkün tutulur. Account deletion API/policy Phase 10 kapsamındadır.
+- MISSED derived deadline, read/action sırasında materyalize edilir. Sonraki farklı UTC slot aynı ilacın effective schedule tanımlarından hesaplanır. Slot yoksa DUE; 24 saat/ertesi takvim günü varsayılmaz. missedAt ilk deadline'ı korur, stok etkilemez. Sonradan açık teyit mümkündür.
+- Haftalık FR-019 sayacı duplicate log tablosu yaratmaz; hesap zone'unda Pazartesi–ertesi Pazartesi due-time aralığını kullanır. Current status sayıları ayrışıktır; unconfirmedAtDeadline tarihsel ek metrik olarak bunlarla örtüşebilir. Geçmiş hafta gerekirse tarihsel schedule'dan tamamlanır. Background job/klinik puan/grafik/export eklenmedi.
+- Sabit tek gelecek schedule için future slots simülasyonu, fullDays=floor(stock/daily consumption), UTC/DST-aware estimated depletion. Açıkça teyit edilmiş future slotlar tekrar tüketim sayılmaz. Çoklu gelecek sürüm/unknown/non-positive stock/archived/no schedule/plan bitişi/3650 gün sınırı açık UNKNOWN nedenleri döndürür.
+- Stock veya plan geçmişi varsa unit değişimi 409 MEDICATION_UNIT_LOCKED; aynı değer noop. Geçmişsiz unknown-stock kaydında serbest. Legacy occurrence/stock unit farklılığında TAKEN 409 MEDICATION_UNIT_CONFLICT; otomatik dönüşüm yok.
+
+Referans: [PostgreSQL transaction isolation](https://www.postgresql.org/docs/17/transaction-iso.html), [Spring Data JPA locking](https://docs.spring.io/spring-data/jpa/reference/jpa/locking.html).

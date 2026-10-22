@@ -1,6 +1,6 @@
-# API sözleşmesi — Phase 1–4
+# API sözleşmesi — Phase 1–5
 
-Kaynak: SRS §8. Domain API tabanı `/api/v1`; auth/account ve ilaç endpointleri aşağıdadır; schedule ve günlük doz endpointleri aşağıdadır; dose actions ve stok kendi fazlarında uygulanacak.
+Kaynak: SRS §8. Domain API tabanı `/api/v1`; auth/account ve ilaç endpointleri aşağıdadır; schedule ve günlük doz endpointleri aşağıdadır; doz işlemleri, inventory ve haftalık özet aşağıdadır.
 
 Mevcut operasyonel endpoint: `GET /actuator/health`, DB erişilebilirken `200 {"status":"UP"}`; erişilemezken 503. Bileşen ayrıntıları kapalıdır.
 
@@ -76,7 +76,7 @@ View:
 {"id":"UUID","name":"Example Medicine A","unit":"tablet","initialStock":"30","archivedAt":null,"createdAt":"2026-10-22T15:00:00Z"}
 ```
 
-`name`: zorunlu, whitespace olmayan en fazla 200 karakter. `unit`: zorunlu, whitespace olmayan en fazla 40 karakter. Dış boşluklar temizlenir. `initialStock`: isteğe bağlı nonnegative decimal (en fazla 13 tamsayı, 6 ondalık basamak); null/belirtilmemiş bilinmeyen, "0" bilinen sıfırdır. API çıktısı string; BigDecimal/NUMERIC ile binary floating point kullanılmaz. Bu alan başlangıç girdisidir; güncel stok endpointi veya ledger henüz yoktur.
+`name`: zorunlu, whitespace olmayan en fazla 200 karakter. `unit`: zorunlu, whitespace olmayan en fazla 40 karakter. Dış boşluklar temizlenir. `initialStock`: isteğe bağlı nonnegative decimal (en fazla 13 tamsayı, 6 ondalık basamak); null/belirtilmemiş bilinmeyen, "0" bilinen sıfırdır. API çıktısı string; BigDecimal/NUMERIC ile binary floating point kullanılmaz. Bu alan başlangıç girdisidir; güncel stok ve ledger Phase 5 inventory endpointinden okunur.
 
 PATCH örnekleri:
 
@@ -128,6 +128,58 @@ JWT gerekir. Date yoksa hesap timezone'unda bugün; geçmiş gün veya hesapta b
 
 Sıralama dueAtUtc ASC + id ASC; yalnız owner kayıtları. `localDate/localTime/timezone` planın hedefini gösterir. DST gap'te UTC karşılığı ilerletilir, hedef saat değişmez; overlap'te ilk offset ile tek occurrence. Üretim tekrarı UUID'yi değiştirmez.
 
-Okuma sırasında 14 günlük ufuk idempotent tamamlanır; geçmiş gün istenirse o günkü sürüme göre eksik slotlar tamamlanır. Bu kayıtlar planlanan olaylardır; gerçek alımı kanıtlamaz. PENDING/DUE zamandan türetilir; mevcut TAKEN/SKIPPED/MISSED durumları varsa korunur. Bu fazda action endpointi, stock tüketimi veya otomatik MISSED eşiği yoktur.
+Okuma sırasında 14 günlük ufuk idempotent tamamlanır; geçmiş gün istenirse o günkü sürüme göre eksik slotlar tamamlanır. Bu kayıtlar planlanan olaylardır; gerçek alımı kanıtlamaz. PENDING/DUE zamandan türetilir; mevcut TAKEN/SKIPPED/MISSED durumları varsa korunur. Phase 5 action/stock endpointleri ve onaylı next-dose MISSED kuralı aşağıdadır.
 
 Medication archive sonrası geçmiş saklanır, gelecekteki pending occurrences kaldırılır. Mevcut occurrence ad/birim snapshot'ları medication edit'inden etkilenmez. Swagger bu endpointleri Bearer güvenlik modeliyle gösterir.
+
+## Phase 5 — dose actions
+
+JWT tüm çağrılarda gerekir. POST `/api/v1/doses/{id}/actions` 201 döner. Header `Idempotency-Key: UUID` zorunludur ve body clientOperationId ile eşleşmelidir.
+
+```json
+{"action":"TAKEN","clientOperationId":"UUID","recordedAt":"2026-10-22T06:05:00Z","expectedVersion":0}
+```
+
+Action TAKEN/SKIPPED/UNDO; recordedAt zorunlu UTC timestamp ve gelecekte olamaz. expectedVersion opsiyoneldir; gönderilirse mevcut occurrence revision ile eşleşir. TAKEN/SKIPPED gelecekteki doza uygulanmaz (409). Başka sahibin/nonexistent dose 404; kimliksiz 401. Exact replay 201 + aynı semantic response; farklı içerikle aynı key 409 IDEMPOTENCY_KEY_REUSED. Header eksik/bozuk 400; header/body uyuşmazlığı 422. İzin verilmeyen state transition/stale expectedVersion 409 DOSE_STATE_CONFLICT.
+
+```json
+{"action":"UNDO","clientOperationId":"YENI-UUID","recordedAt":"2026-10-22T06:06:00Z","undoActionId":"SON-ACTION-UUID","expectedVersion":1}
+```
+
+undoActionId zorunlu ve yalnız o occurrence'ın son TAKEN/SKIPPED action'ı olmalı. Aynı undo'nun başka key ile tekrarı veya eski target 409; original key replay'i yeni bir iade yapmaz. UNDO eski kaydı silmez; TAKEN debit'ini telafi eder, SKIPPED stok değiştirmez. Sonuç zamana göre DUE/MISSED'dir.
+
+Yanıt alanları: actionId, occurrenceId, clientOperationId, action, undoActionId, status, recordedAt (client time), serverRecordedAt, occurrenceVersion, inventoryDelta (decimal string), balance `{quantity,known,version,warnings}`. Bilinmeyen quantity null; warnings STOCK_UNKNOWN/STOCK_NEGATIVE olabilir. Replay balance ilk işlem anına aittir; güncel stok için inventory GET kullanılır.
+
+GET `/api/v1/doses/{id}/actions?page=0&size=20`: immutable audit event history; newest occurrenceVersion önce. Page 0–10000, size 1–100. Her event ilk yanıtı ve o andaki balance'ı korur.
+
+Daily dose View artık version, lastActionId, recordedAt ve missedAt içerir. lastActionId UNDO hedefini seçmekte kullanılabilir; son action UNDO ise yeniden undo yapılamaz. MISSED, aynı ilacın sonraki farklı planlı UTC slotu geldiğinde stok değiştirmeden oluşur. Sonraki slot yoksa DUE kalır; açık TAKEN/SKIPPED daha sonra girilebilir.
+
+## Phase 5 — inventory
+
+GET `/api/v1/inventory/{medicationId}?page=0&size=20`: `{medicationId,unit,balance,projection,movements}`. Movements sayfalıdır ve changeQuantity/unit/reason/doseActionId/createdAt içerir. Initial stock değil, ledger kaynaklı balance günceldir.
+
+POST `/api/v1/inventory/{medicationId}/adjustments`, Idempotency-Key ile, 201:
+
+```json
+{"reason":"RESTOCK","quantity":"20","clientOperationId":"UUID"}
+```
+
+```json
+{"reason":"CORRECTION","quantity":"17.5","clientOperationId":"YENI-UUID"}
+```
+
+RESTOCK pozitif miktar ekler; CORRECTION nonnegative mutlak gözlenen stoku ayarlar ve fark entry'si yazar. En fazla 13 tamsayı/6 ondalık; negatif, zero restock veya fazla hassas input 422. Unknown miktar RESTOCK ile known sayılmaz; CORRECTION known=true yapar. Global UUID replay/conflict kuralları dose action ile aynıdır.
+
+Projection `{status,reason,dailyConsumption,fullDays,estimatedDepletionAt,estimatedDepletionDate,timezone}`. Status ESTIMATED veya UNKNOWN. Unknown nedenleri UNKNOWN_STOCK, NON_POSITIVE_STOCK, ARCHIVED_MEDICATION, NO_FUTURE_SCHEDULE, VARIABLE_SCHEDULE, INVALID_SCHEDULE, PLAN_ENDS_BEFORE_DEPLETION, FORECAST_HORIZON_LIMIT. Tahmin mevcut balance ve gelecek plan slotlarından, 3650 günlük sınır içinde yapılır; doz önerisi değildir.
+
+Medication PATCH unit, opening/ledger/schedule geçmişinden sonra farklı değere değiştirilemez: 409 MEDICATION_UNIT_LOCKED. Aynı birim tekrar yazılabilir; geçmişsiz unknown-stock medication değiştirilebilir. Farklı birim için ayrı kayıt gerekir.
+
+## FR-019 — haftalık özet
+
+GET `/api/v1/doses/summary?weekStart=2026-10-19`: date verilmezse account zone'unda bu haftanın Pazartesisi. Yalnız Pazartesi başlayan mevcut/geçmiş hafta kabul edilir; diğerleri 422. Gün sınırları UTC'de sabit 24 saat varsaymaz.
+
+```json
+{"weekStart":"2026-10-19","weekEndExclusive":"2026-10-26","timezone":"Europe/Istanbul","scheduledDoses":12,"taken":0,"skipped":1,"missed":4,"awaitingConfirmation":0,"pending":7,"unconfirmedAtDeadline":4}
+```
+
+Current status alanları ayrışıktır ve toplamları scheduledDoses'a eşittir. unconfirmedAtDeadline tarihsel ek metriktir; sonradan TAKEN/SKIPPED olmuş bir doz için de missedAt izi kalabilir. Bu alan diğer sayaçlarla örtüşebilir, toplam içine tekrar eklenmez. Haftaya dahil etme planned due time'a göre account timezone'unda yapılır; eylemin sonradan kaydedildiği haftaya göre değildir. “Atlandı” ve “zamanında teyit girilmedi” ayrı anlamlardır; “ilaç unutuldu” sonucu çıkarılmaz.

@@ -1,10 +1,10 @@
 # MedTrack
 
-Türkçe ilaç planı ve stok takibi uygulaması. Ana gereksinim kaynağı [SRS](docs/SRS.md); özgün Pages belgesi [docs/source](docs/source/) altında korunur.
+Türkçe ilaç planı ve stok takibi uygulaması. Ana gereksinim kaynakları [SRS](docs/SRS.md) ve [onaylı Phase 5 eki](docs/SRS-addendum-phase-5.md); özgün Pages belgesi [docs/source](docs/source/) altında korunur.
 
 ## Durum
 
-Phase 0–4 yerel kabul kontrolleri tamamlandı. Ayrıntılı durum ve sonraki aşamalar: [proje panosu](docs/project-board.md). Mobil uygulama Phase 6'da başlayacak.
+Phase 0–5 yerel kabul kontrolleri tamamlandı. Ayrıntılı durum ve sonraki aşamalar: [proje panosu](docs/project-board.md). Mobil uygulama Phase 6'da başlayacak.
 
 ## Gereksinimler
 
@@ -55,7 +55,7 @@ cd backend
 # Java kaynaklarını biçimlendirmek için: ./mvnw spotless:apply
 ```
 
-GitHub reposu: [pelinsaglamer/MedTrack](https://github.com/pelinsaglamer/MedTrack). `main` dalına push ve pull request olayları [Backend CI](https://github.com/pelinsaglamer/MedTrack/actions/workflows/backend.yml) kontrolünü başlatır. Güncel uzak çalıştırma sonucu Actions sayfasından izlenir. Yerel sonuçlar [Phase 0–1 raporunda](docs/phase-0-1-report.md), [Phase 2 raporunda](docs/phase-2-report.md) , [Phase 3 raporunda](docs/phase-3-report.md) ve [Phase 4 raporunda](docs/phase-4-report.md).
+GitHub reposu: [pelinsaglamer/MedTrack](https://github.com/pelinsaglamer/MedTrack). `main` dalına push ve pull request olayları [Backend CI](https://github.com/pelinsaglamer/MedTrack/actions/workflows/backend.yml) kontrolünü başlatır. Güncel uzak çalıştırma sonucu Actions sayfasından izlenir. Yerel sonuçlar [Phase 0–1 raporunda](docs/phase-0-1-report.md), [Phase 2 raporunda](docs/phase-2-report.md), [Phase 3 raporunda](docs/phase-3-report.md), [Phase 4 raporunda](docs/phase-4-report.md) ve [Phase 5 raporunda](docs/phase-5-report.md).
 
 Gerçek sağlık verisi, parola veya token repoya eklenmez. Uygulama tıbbi tavsiye ve garantili bildirim sağlamaz.
 
@@ -84,7 +84,7 @@ Sunucu çalışırken [Swagger UI](http://127.0.0.1:8080/swagger-ui/index.html) 
 3. Dönen `accessToken` değerini **Authorize → bearerAuth** alanına girin (yalnız token değeri).
 4. `/api/v1/medications` üzerinden ilaç oluşturun/listeleyin; `/{id}` üzerinden okuyun, PATCH ile düzenleyin veya `{"archived":true}` gönderin.
 
-İlaç adı/birim zorunlu; liste varsayılan olarak yalnız aktif kayıtları, sayfa başına 20 (en fazla 100) kayıt döndürür. Arşivleri görmek için `includeArchived=true`. `initialStock` isteğe bağlı, hassas ondalık başlangıç girdisidir; PATCH ile değişmez. Güncel stok/ledger ve hareketleri Phase 5'te uygulanacaktır. Kullanım planları Phase 4 kapsamında aşağıda açıklanır.
+İlaç adı/birim zorunlu; liste varsayılan olarak yalnız aktif kayıtları, sayfa başına 20 (en fazla 100) kayıt döndürür. Arşivleri görmek için `includeArchived=true`. `initialStock` isteğe bağlı, hassas ondalık başlangıç girdisidir; PATCH ile değişmez. Güncel stok/ledger ve hareketleri Phase 5 kapsamında uygulanmıştır. Kullanım planları Phase 4 kapsamında aşağıda açıklanır.
 
 Dokümantasyon rotaları yalnız şemayı gösterir; ilaç endpointleri JWT gerektirir. Swagger token'ı kalıcı saklamaz. Tam sözleşme [API belgesindedir](docs/api-contract.md).
 
@@ -102,4 +102,23 @@ Aynı POST ile yeni sürüm oluşturulur. Yarın için değişiklikte dün ve bu
 
 İleri DST boşluğunda saat geçiş süresi kadar ileri taşınır; geri geçişte ilk offset ile tek occurrence oluşturulur. `localTime` her zaman hedeflenen saati korur. Üretim/okuma tekrarlandığında occurrence UUID'si sabittir. Plan yazma/günlük okuma sırasında 14 günlük ufuk üretilir; geçmiş gün gerektiğinde o zamanki sürümden tamamlanır.
 
-`PENDING` gelecekteki, `DUE` zamanı gelmiş ve teyit bekleyen kayıttır. Bunlar ilaç alımı teyidi değildir. TAKEN/SKIPPED/UNDO ve stok hareketi Phase 5'te eklenecek. MISSED takip eşiği SRS'de sayısal tanımlı olmadığı için otomatik eşik eklenmedi.
+`PENDING` gelecekteki, `DUE` zamanı gelmiş ve teyit bekleyen kayıttır. Bunlar ilaç alımı teyidi değildir. TAKEN/SKIPPED/UNDO ve stok hareketleri artık Phase 5 kapsamında kullanılabilir. MISSED için kullanıcı onayıyla aynı ilacın sonraki planlı doz zamanı kullanılır; sonraki doz yoksa DUE kalır.
+
+## Doz işlemleri, stok ve haftalık özet — Phase 5
+
+Swagger'da günlük dozun `id` değerini alıp `POST /api/v1/doses/{id}/actions` kullanın:
+
+```json
+{"action":"TAKEN","clientOperationId":"YENI-UUID","recordedAt":"2026-10-22T06:05:00Z"}
+```
+
+`Idempotency-Key` başlığı aynı UUID olmalı. SKIPPED stok azaltmaz. Aynı anahtar/içerik tekrarlandığında ilk yanıt döner ve stok tekrar düşmez. Her yeni kullanıcı işlemi yeni UUID kullanır. UNDO için `action: "UNDO"` ve geri alınacak son `actionId` değerini `undoActionId` alanına ekleyin; ilk tüketim telafi edilir, geçmiş silinmez.
+
+- `GET /api/v1/doses/{id}/actions`: değişmez işlem geçmişi (sayfalı).
+- `GET /api/v1/inventory/{medicationId}`: güncel stok, sayfalı ledger ve yaklaşık tükenme tahmini.
+- `POST /api/v1/inventory/{medicationId}/adjustments`: RESTOCK quantity ekleme, CORRECTION quantity gözlenen mutlak stok; yine Idempotency-Key/clientOperationId gerekir.
+- `GET /api/v1/doses/summary?weekStart=2026-10-19`: Pazartesi başlayan hesap haftası; date yoksa bu hafta.
+
+Stok bilinmiyorsa sıfır varsayılmaz; negatif stok kullanıcı onaylı TAKEN kaydını engellemez ve uyarı üretir. Sabit planlarda tahmin verilir; değişken/belirsiz planlarda nedeni açıklanan UNKNOWN döner. Tahmin doz önerisi değildir.
+
+Stok/plan geçmişi oluşmuş bir ilaçta birim değiştirilemez. Farklı birim için yeni kayıt açın. Haftalık özet SKIPPED ve MISSED'i ayırır; teyit yokluğu ilaç alınmadığı anlamına gelmez. Gerçek mobil offline kuyruğu Phase 9'da uygulanacak; bu faz sunucu tarafındaki retry/transaction güvenliğini sağlar.

@@ -70,3 +70,19 @@ Toplam 37 test: 23 önceki faz regresyonu + 14 yeni test. `./scripts/dev.sh test
 Toplam 61 test: önceki 37 regresyon + 24 yeni kontrol. Dört migration validate/no-op; 51 Java dosyası Spotless kontrolünde temiz. `./scripts/dev.sh test` ile çalıştırılır. Test clock'u nanosaniyeli sabit instant kullanır; timezone/DST senaryoları işletim sistemi saatine bağlı değildir.
 
 TAKEN/SKIPPED/UNDO/idempotent stock action API'leri Phase 5 kapsamındadır. SQL ile verilen TAKEN fixture'ı yalnız geçmiş/gelecek koruma testidir, üretimde otomatik TAKEN davranışı değildir. MISSED için takip eşiği onayı beklenir; bildirim yenilemesi Phase 8 kabulüdür.
+
+## Phase 5 — FR-006/009/010/014; FR-003-A/FR-019 onaylı ek; BR-01/02/04; AC-02–05/08 backend
+
+Toplam 106 test, 0 failure/error/skipped. Önceki 61 test + 45 yeni kontrol. 66 Java dosyası format denetiminde temiz.
+
+- 14 inventory testi: opening known/zero/unknown, decimal exactness, append-only restock/correction, unknown→known, exact replay after later changes, key reuse, owner/history isolation, validation, auth, concurrent replay/distinct restocks, history pagination, rollback ve parent erasure.
+- 27 dose action/summary testi: TAKEN tek consumption, SKIPPED delta0, exact replay, conflicting/different keys, header/body, optional version, future dose/time, unknown/negative stock, owner auth/audit, parallel same/different key, immutable history after schedule revision, transaction completion rollback, forecast fixed/variable/finite/fractional/DST.
+- UNDO: consumption compensation, SKIP undo delta0, same-key replay, stale target/newer action, cannot undo undo, parallel refund once, correction sonrası yalnız orijinal debit'i geri ekleme ve self-referencing audit account cascade.
+- Summary: hafta/account-zone aralığı, SKIPPED/MISSED/pending ayrımı, deadline sonrası late confirmation/undo trace, owner izolasyonu, invalid week/auth.
+- Birim: known/opening, restock ve schedule history kilidi; geçmişsiz unknown-stock metadata düzeltmesi serbest.
+- 1 izole migration testi: yeni geçici test DB'sinde V4'e kadar migrate, old known/unknown medications oluştur, V5/V6 upgrade, one opening/no invented unknown, validate/no-op replay. Test rolü CREATE DATABASE yetkisi ister; DB rastgele medtrack_upgrade_* adıyla yaratılıp yalnız o DB silinir.
+- Phase 4'e eklenen 3 deadline testi: sonraki aynı ilaç dozu anı, finite last dose DUE kalması, DST 25 saatlik deadline. Eski rolling history beklentisi kullanıcı onaylı MISSED kuralına güncellendi.
+
+Rollback testi response tamamlanırken DB hatası üretir; action, ledger, snapshot, occurrence ve operation kayıtlarının hepsi geri alınır. Test trigger/function'ları finally içinde kaldırılır. Gerçek med verisi yoktur.
+
+Mobil offline queue, real-device notifications ve account deletion API testi sonraki fazlardır; server replay/parent cascade testleri bunların tamamlandığı anlamına gelmez.

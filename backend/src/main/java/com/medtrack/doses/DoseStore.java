@@ -58,6 +58,30 @@ public class DoseStore {
             Timestamp.from(now)));
   }
 
+  public DoseDtos.WeeklySummary summary(UUID owner, LocalDate start, ZoneId zone, Instant now) {
+    Instant from = start.atStartOfDay(zone).toInstant(),
+        until = start.plusDays(7).atStartOfDay(zone).toInstant();
+    return jdbc.queryForObject(
+        "select count(*) filter(where d.missed_at is not null) unconfirmed_deadline, count(*) total, count(*) filter(where d.status='TAKEN') taken, count(*) filter(where d.status='SKIPPED') skipped, count(*) filter(where d.status='MISSED') missed, count(*) filter(where d.status in ('PENDING','DUE') and d.due_at_utc<=?) awaiting, count(*) filter(where d.status in ('PENDING','DUE') and d.due_at_utc>?) pending from dose_occurrences d join schedule_versions s on s.id=d.schedule_version_id join medications m on m.id=s.medication_id where m.user_id=? and d.due_at_utc>=? and d.due_at_utc<?",
+        (rs, n) ->
+            new DoseDtos.WeeklySummary(
+                start,
+                start.plusDays(7),
+                zone.getId(),
+                rs.getLong("total"),
+                rs.getLong("taken"),
+                rs.getLong("skipped"),
+                rs.getLong("missed"),
+                rs.getLong("awaiting"),
+                rs.getLong("pending"),
+                rs.getLong("unconfirmed_deadline")),
+        Timestamp.from(now),
+        Timestamp.from(now),
+        owner,
+        Timestamp.from(from),
+        Timestamp.from(until));
+  }
+
   public DoseDtos.Page list(
       UUID owner, LocalDate date, ZoneId zone, int page, int size, Instant now) {
     Instant from = date.atStartOfDay(zone).toInstant(),
@@ -73,7 +97,7 @@ public class DoseStore {
             Timestamp.from(until));
     var rows =
         jdbc.query(
-            "select d.*,s.medication_id,s.version,s.quantity_per_dose,s.timezone"
+            "select d.*,s.medication_id,s.version as schedule_version_number,s.quantity_per_dose,s.timezone, (select a.id from dose_actions a where a.occurrence_id=d.id order by a.occurrence_version desc limit 1) as last_action_id, (select a.recorded_at from dose_actions a where a.occurrence_id=d.id order by a.occurrence_version desc limit 1) as action_recorded_at"
                 + joins
                 + " order by d.due_at_utc,d.id limit ? offset ?",
             (rs, n) -> {
@@ -85,7 +109,7 @@ public class DoseStore {
                   rs.getObject("id", UUID.class),
                   rs.getObject("medication_id", UUID.class),
                   rs.getObject("schedule_version_id", UUID.class),
-                  rs.getInt("version"),
+                  rs.getInt("schedule_version_number"),
                   rs.getString("medication_name"),
                   rs.getString("unit"),
                   rs.getBigDecimal("quantity_per_dose").stripTrailingZeros().toPlainString(),
@@ -93,7 +117,15 @@ public class DoseStore {
                   rs.getObject("local_date", LocalDate.class),
                   rs.getObject("local_time", LocalTime.class).toString(),
                   rs.getString("timezone"),
-                  status);
+                  status,
+                  rs.getLong("version"),
+                  rs.getObject("last_action_id", UUID.class),
+                  rs.getTimestamp("action_recorded_at") == null
+                      ? null
+                      : rs.getTimestamp("action_recorded_at").toInstant(),
+                  rs.getTimestamp("missed_at") == null
+                      ? null
+                      : rs.getTimestamp("missed_at").toInstant());
             },
             owner,
             Timestamp.from(from),

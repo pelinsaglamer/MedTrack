@@ -18,10 +18,31 @@ public final class DoseDtos {
       LocalDate localDate,
       String localTime,
       String timezone,
-      String status) {
+      String status,
+      long version,
+      UUID lastActionId,
+      Instant recordedAt,
+      Instant missedAt) {
     @Override
     public String toString() {
       return "DoseView[REDACTED]";
+    }
+  }
+
+  public record WeeklySummary(
+      java.time.LocalDate weekStart,
+      java.time.LocalDate weekEndExclusive,
+      String timezone,
+      long scheduledDoses,
+      long taken,
+      long skipped,
+      long missed,
+      long awaitingConfirmation,
+      long pending,
+      long unconfirmedAtDeadline) {
+    @Override
+    public String toString() {
+      return "WeeklySummary[REDACTED]";
     }
   }
 

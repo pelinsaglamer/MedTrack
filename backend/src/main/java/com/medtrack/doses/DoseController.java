@@ -28,4 +28,15 @@ public class DoseController {
       @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
     return doses.list(date, page, size);
   }
+
+  @GetMapping("/summary")
+  @Operation(
+      summary = "Weekly counts of confirmed, skipped and unconfirmed doses",
+      description =
+          "Calendar week starts Monday in the account timezone. MISSED means no confirmation by the next planned dose, not proof of non-intake.")
+  public DoseDtos.WeeklySummary summary(
+      @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
+          LocalDate weekStart) {
+    return doses.summary(weekStart);
+  }
 }
