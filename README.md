@@ -55,7 +55,7 @@ cd backend
 # Java kaynaklarını biçimlendirmek için: ./mvnw spotless:apply
 ```
 
-CI dosyası hazırdır; uzak GitHub reposu oluşturulmadığı için hosted CI çalıştırıldığı iddia edilmez. Yerel sonuçlar [Phase 0–1 raporunda](docs/phase-0-1-report.md) ve [Phase 2 raporunda](docs/phase-2-report.md).
+GitHub reposu: [pelinsaglamer/MedTrack](https://github.com/pelinsaglamer/MedTrack). `main` dalına push ve pull request olayları [Backend CI](https://github.com/pelinsaglamer/MedTrack/actions/workflows/backend.yml) kontrolünü başlatır. Güncel uzak çalıştırma sonucu Actions sayfasından izlenir. Yerel sonuçlar [Phase 0–1 raporunda](docs/phase-0-1-report.md) ve [Phase 2 raporunda](docs/phase-2-report.md).
 
 Gerçek sağlık verisi, parola veya token repoya eklenmez. Uygulama tıbbi tavsiye ve garantili bildirim sağlamaz.
 

@@ -5,7 +5,7 @@ Her faz kendi kapısı geçilmeden tamamlandı sayılmaz. Phase 0–2 mevcut kul
 | Faz | Kapsam | Durum | Çıkış kanıtı |
 |---|---|---|---|
 | 0 | SRS, araçlar, repo, README, ADR, pano, CI iskeleti | Tamamlandı | Phase raporu |
-| 1 | Spring Boot, PostgreSQL, migration, health, global errors | Yerel kontroller tamamlandı | 8 test geçti; build + migration + format başarılı. Hosted CI henüz çalışmadı |
+| 1 | Spring Boot, PostgreSQL, migration, health, global errors | Yerel kontroller tamamlandı | 8 test geçti; build + migration + format başarılı. GitHub Actions etkin |
 | 2 | Identity/authorization | Yerel kontroller tamamlandı | 23 toplam test; JWT, refresh/replay, logout, sahiplik, log redaction |
 | 3 | Medication CRUD | Bekliyor | OpenAPI ve API testleri |
 | 4 | Versioned schedules | Bekliyor | DST/sınır testleri |
@@ -17,4 +17,4 @@ Her faz kendi kapısı geçilmeden tamamlandı sayılmaz. Phase 0–2 mevcut kul
 | 10 | Privacy/hardening | Bekliyor | Tüm MUST testleri |
 | 11 | Paketleme/portfolio | Bekliyor | Demo ve teslim |
 
-Uzak servis oluşturulmadı; bu dosya repo içinde sürümlenen proje panosudur. Kaynak SRS veya handoff metinleri değiştirilmedi.
+GitHub remote: https://github.com/pelinsaglamer/MedTrack. Bu dosya repo içinde sürümlenen proje panosudur. Kaynak SRS veya handoff metinleri değiştirilmedi.
