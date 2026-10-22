@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+@io.swagger.v3.oas.annotations.security.SecurityRequirements
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {

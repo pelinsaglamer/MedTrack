@@ -34,3 +34,18 @@ FR-001/002 Phase 2; FR-003 Phase 3; FR-004/005/012/014 Phase 4–5; FR-006/009/0
 `MedTrackApplicationTests`: Phase 1 regression'ları geçerli auth ile sürer; iki migration validate/no-op kontrol edilir. Toplam 23 test, 0 failure/error/skipped.
 
 Sahiplik senaryosu test classpath'inde bulunan fixture endpointinde ortak guard'ı çalıştırır; gerçek ilaç endpointinin AC-08 kabulü Phase 3–5'te ayrıca doğrulanacaktır. FK cascade testi account deletion API'sinin tamamlandığı anlamına gelmez; AC-10 Phase 10'da kalır.
+
+## Phase 3 — FR-003; FR-002 / AC-08 ilaç erişimi; NFR-01/02/06/07/09
+
+13 MedicationIntegrationTests (gerçek HTTP + PostgreSQL):
+
+- Create/Location/get, owner ataması ve hassas decimal başlangıç miktarı.
+- Bilinmeyen stock ile sıfır ayrımı; boş/uzun name/unit, negatif/fazla hassas/fazla büyük stock doğrulaması.
+- Bütün ilaç operasyonlarında auth; ikinci kullanıcının read/edit/archive/list izolasyonu (AC-08 ilaç metadata kapsamı).
+- Kısmi patch, değişmez initialStock/createdAt, arşiv timestamp idempotency ve soft delete.
+- Owner-scoped bounded pagination; malformed/unknown ID; unsupported owner/id/stock alanlarının reddi; boş patch.
+- Eşzamanlı iki kısmi update'in iki alanı da koruması.
+- Public OpenAPI/Swagger assetleri, Bearer şeması, CRUD paths/201 response, public login security=[], persistAuthorization=false.
+- İlaç adının oluşturma/okuma/listeme/hatalı güncellemede loglara çıkmaması.
+
+Toplam 36 test: 23 önceki faz regresyonu + 13 yeni test. `./scripts/dev.sh test` build, entegrasyon ve Spotless kontrolünü çalıştırır. Üç migration için validate/no-op testi geçer. Tam AC-01 schedule ve mobil fazlarını bekler; ledger ve stok doğruluğu Phase 5'te test edilecek.

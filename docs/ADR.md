@@ -48,3 +48,21 @@ Kullanıcı Phase 2 devamını onayladı. SRS'nin JWT access + hashed/rotated re
 - Auth yanıtları no-store. Parola/token DTO'ları `toString` içinde redacted. Web debug/SQL bind/constraint detail logları kapalı; test logları da hassas girdi için kontrol edilir.
 
 Kaynaklar: [Spring Security JWT](https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html), [password storage](https://docs.spring.io/spring-security/reference/features/authentication/password-storage.html).
+
+## Phase 3 uygulama kararları — 22 Ekim 2026
+
+Kaynak: FR-003, SRS §7/8/13 Phase 3 ve AC-08. Yeni ürün özelliği eklenmedi; kaynak SRS değiştirilmedi.
+
+- V3: medications UUID, owner FK, name/unit, archived_at, created_at. Controller → service → repository; DTO dışında entity serileştirilmez.
+- SRS bounded validation için name en fazla 200, unit en fazla 40 karakter; boş/whitespace reddedilir, dış boşluklar temizlenir.
+- SRS create payload'ındaki `initialStock` korunur: NUMERIC(19,6)/BigDecimal, 13 tamsayı ve en fazla 6 ondalık basamak, negatif olamaz. Null/belirtilmemiş = bilinmiyor, sıfır = bilinen sıfır. API yanıtında decimal string kullanılır.
+- Bu alan değişmez başlangıç girdisidir; güncel stok değildir. Phase 5 migration'ı bilinen başlangıç girdilerini tam bir kez opening ledger entry'ye dönüştürmeli. Phase 3'te inventory snapshot/ledger/tüketim veya projeksiyon uygulanmadı.
+- Her okuma/güncelleme sorgusu `id AND user_id`, her liste sorgusu `user_id` içerir. Client owner/id alanları DTO'da kabul edilmez; yabancı kayıt ve olmayan kayıt aynı 404 döner.
+- Liste: page 0–10000, size 1–100 (varsayılan 20), created_at DESC + id DESC. Varsayılan aktif, includeArchived=true ile arşiv dahil. Spring Page doğrudan dışarı açılmaz; kararlı Page DTO'su kullanılır.
+- PATCH name/unit/archived:true alanlarını destekler. Omitted/null alanlar değişmez; boş patch reddedilir. Unarchive kapsam dışı olduğu için archived:false 422. Metadata kısmi güncellemeleri transaction içinde owner-scoped pessimistic lock kullanır.
+- Arşivleme soft delete'tir; tekrar istek aynı timestamp'i korur. Kayıt ID ile sahibi tarafından okunur. Hard delete API'si yoktur. Gelecek fazlar schedule/notification arşiv etkisini ayrıca uygulamalı.
+- Desteklenmeyen create/patch alanları parse aşamasında 400 INVALID_REQUEST; alan doğrulaması 422. Parametre validation da 422 ve standart hata şekli kullanır.
+- Spring Boot 4 uyumlu springdoc 3.1.1. Dokümantasyon GET rotaları public; domain API'leri korumalı. OpenAPI global Bearer auth; public auth operasyonlarında security=[]; sadece `/api/v1/**` belgelenir.
+- Swagger persistAuthorization=false; kurgusal örnekler ve redacted DTO string'leri, web/bind log redaction ile birlikte kullanılır.
+
+Kaynak: [springdoc uyumluluk matrisi](https://springdoc.org/#what-is-the-compatibility-matrix-of-springdoc-openapi-with-spring-boot), [Maven Central sürümleri](https://repo.maven.apache.org/maven2/org/springdoc/springdoc-openapi-starter-webmvc-ui/maven-metadata.xml).

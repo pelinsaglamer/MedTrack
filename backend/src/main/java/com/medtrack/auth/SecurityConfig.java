@@ -84,7 +84,13 @@ public class SecurityConfig {
         .requestCache(c -> c.disable())
         .authorizeHttpRequests(
             a ->
-                a.requestMatchers(org.springframework.http.HttpMethod.GET, "/actuator/health")
+                a.requestMatchers(
+                        org.springframework.http.HttpMethod.GET,
+                        "/actuator/health",
+                        "/v3/api-docs",
+                        "/v3/api-docs/**",
+                        "/swagger-ui.html",
+                        "/swagger-ui/**")
                     .permitAll()
                     .requestMatchers(
                         org.springframework.http.HttpMethod.POST,

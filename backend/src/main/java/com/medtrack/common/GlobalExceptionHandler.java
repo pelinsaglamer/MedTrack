@@ -38,6 +38,27 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
   }
 
   @Override
+  protected ResponseEntity<Object> handleHandlerMethodValidationException(
+      org.springframework.web.method.annotation.HandlerMethodValidationException ex,
+      HttpHeaders headers,
+      HttpStatusCode status,
+      WebRequest request) {
+    if (ex.isForReturnValue())
+      return new ResponseEntity<>(
+          error("INTERNAL_ERROR", "An unexpected error occurred", request, Map.of()),
+          headers,
+          HttpStatus.INTERNAL_SERVER_ERROR);
+    return new ResponseEntity<>(
+        error(
+            "VALIDATION_ERROR",
+            "Request validation failed",
+            request,
+            Map.of("query", "Invalid query parameter")),
+        headers,
+        HttpStatus.UNPROCESSABLE_ENTITY);
+  }
+
+  @Override
   protected ResponseEntity<Object> handleExceptionInternal(
       Exception ex, Object body, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
     String code =

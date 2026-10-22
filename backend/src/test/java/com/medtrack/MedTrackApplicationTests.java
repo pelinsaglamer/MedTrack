@@ -83,7 +83,7 @@ class MedTrackApplicationTests {
             "select count(*) from information_schema.tables where table_name = 'users' and table_schema = 'public'",
             Integer.class));
     assertEquals(
-        2,
+        3,
         jdbc.queryForObject(
             "select count(*) from flyway_schema_history where success = true", Integer.class));
   }

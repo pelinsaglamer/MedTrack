@@ -4,7 +4,7 @@ Türkçe ilaç planı ve stok takibi uygulaması. Ana gereksinim kaynağı [SRS]
 
 ## Durum
 
-Phase 0, Phase 1 ve Phase 2 yerel kabul kontrolleri tamamlandı. Ayrıntılı durum ve sonraki aşamalar: [proje panosu](docs/project-board.md). Mobil uygulama Phase 6'da başlayacak.
+Phase 0–3 yerel kabul kontrolleri tamamlandı. Ayrıntılı durum ve sonraki aşamalar: [proje panosu](docs/project-board.md). Mobil uygulama Phase 6'da başlayacak.
 
 ## Gereksinimler
 
@@ -44,7 +44,7 @@ curl http://127.0.0.1:8080/actuator/health
 - `mobile/`: Phase 6 için yer tutucu.
 - `.github/workflows/backend.yml`: Java 21 + PostgreSQL üzerinde build/test/format kontrolü.
 
-Backend şu anda yerel geliştirme içindir. Phase 2 kayıt/giriş, refresh rotasyonu, çıkış ve hesap erişimi uygulanmıştır. Hosted ortamlarda SRS gereği HTTPS kullanılmalı; mevcut loopback HTTP kurulumu hosted kabul kriterini karşılamaz.
+Backend şu anda yerel geliştirme içindir. Kayıt/giriş, refresh rotasyonu, çıkış, hesap erişimi ve owner-scoped ilaç CRUD/arşivleme uygulanmıştır. Hosted ortamlarda SRS gereği HTTPS kullanılmalı; mevcut loopback HTTP kurulumu hosted kabul kriterini karşılamaz.
 
 ## Doğrulama
 
@@ -55,7 +55,7 @@ cd backend
 # Java kaynaklarını biçimlendirmek için: ./mvnw spotless:apply
 ```
 
-GitHub reposu: [pelinsaglamer/MedTrack](https://github.com/pelinsaglamer/MedTrack). `main` dalına push ve pull request olayları [Backend CI](https://github.com/pelinsaglamer/MedTrack/actions/workflows/backend.yml) kontrolünü başlatır. Güncel uzak çalıştırma sonucu Actions sayfasından izlenir. Yerel sonuçlar [Phase 0–1 raporunda](docs/phase-0-1-report.md) ve [Phase 2 raporunda](docs/phase-2-report.md).
+GitHub reposu: [pelinsaglamer/MedTrack](https://github.com/pelinsaglamer/MedTrack). `main` dalına push ve pull request olayları [Backend CI](https://github.com/pelinsaglamer/MedTrack/actions/workflows/backend.yml) kontrolünü başlatır. Güncel uzak çalıştırma sonucu Actions sayfasından izlenir. Yerel sonuçlar [Phase 0–1 raporunda](docs/phase-0-1-report.md), [Phase 2 raporunda](docs/phase-2-report.md) ve [Phase 3 raporunda](docs/phase-3-report.md).
 
 Gerçek sağlık verisi, parola veya token repoya eklenmez. Uygulama tıbbi tavsiye ve garantili bildirim sağlamaz.
 
@@ -74,3 +74,16 @@ API sözleşmesi ve örnek JSON: [API belgesi](docs/api-contract.md).
 CSRF kapalıdır çünkü kimlik doğrulama cookie üzerinden yapılmaz; API Bearer token kullanır. CORS için çapraz origin izni açılmamıştır. Auth istekleri tek süreçte doğrudan istemci IP'si başına dakikada 30 ile sınırlıdır. Çok instance/proxy deployment öncesi ortak limiter ve güvenilir proxy politikası gerekir.
 
 Refresh token'ın yanıtı kaybolursa eski token'ı tekrar göndermek oturumu kapatır; istemci Phase 6'da refresh çağrılarını tekleştirmeli ve bu durumda yeniden giriş istemelidir. Her korumalı istekte DB oturum durumu doğrulanır; logout/replay iptali access token için de hemen geçerlidir.
+
+## İlaç API ve Swagger — Phase 3
+
+Sunucu çalışırken [Swagger UI](http://127.0.0.1:8080/swagger-ui/index.html) ve [OpenAPI JSON](http://127.0.0.1:8080/v3/api-docs) kullanılabilir.
+
+1. Swagger'da `/api/v1/auth/register` ile yalnız kurgusal hesap oluşturun.
+2. `/api/v1/auth/login` ile giriş yapın.
+3. Dönen `accessToken` değerini **Authorize → bearerAuth** alanına girin (yalnız token değeri).
+4. `/api/v1/medications` üzerinden ilaç oluşturun/listeleyin; `/{id}` üzerinden okuyun, PATCH ile düzenleyin veya `{"archived":true}` gönderin.
+
+İlaç adı/birim zorunlu; liste varsayılan olarak yalnız aktif kayıtları, sayfa başına 20 (en fazla 100) kayıt döndürür. Arşivleri görmek için `includeArchived=true`. `initialStock` isteğe bağlı, hassas ondalık başlangıç girdisidir; PATCH ile değişmez. Güncel stok/ledger ve hareketleri Phase 5'te uygulanacaktır. Kullanım planları Phase 4 kapsamındadır.
+
+Dokümantasyon rotaları yalnız şemayı gösterir; ilaç endpointleri JWT gerektirir. Swagger token'ı kalıcı saklamaz. Tam sözleşme [API belgesindedir](docs/api-contract.md).

@@ -1,13 +1,13 @@
 # Proje panosu
 
-Her faz kendi kapısı geçilmeden tamamlandı sayılmaz. Phase 0–2 mevcut kullanıcı kapsamıdır.
+Her faz kendi kapısı geçilmeden tamamlandı sayılmaz. Phase 0–3 mevcut kullanıcı kapsamıdır.
 
 | Faz | Kapsam | Durum | Çıkış kanıtı |
 |---|---|---|---|
 | 0 | SRS, araçlar, repo, README, ADR, pano, CI iskeleti | Tamamlandı | Phase raporu |
 | 1 | Spring Boot, PostgreSQL, migration, health, global errors | Yerel kontroller tamamlandı | 8 test geçti; build + migration + format başarılı. GitHub Actions etkin |
 | 2 | Identity/authorization | Yerel kontroller tamamlandı | 23 toplam test; JWT, refresh/replay, logout, sahiplik, log redaction |
-| 3 | Medication CRUD | Bekliyor | OpenAPI ve API testleri |
+| 3 | Medication CRUD | Yerel kontroller tamamlandı | 36 toplam test; owner CRUD/archive; Swagger/OpenAPI; V3 migration |
 | 4 | Versioned schedules | Bekliyor | DST/sınır testleri |
 | 5 | Dose + inventory | Bekliyor | Retry/concurrency stok testleri |
 | 6 | Flutter temel | Bekliyor | Login + liste; state kararı |
