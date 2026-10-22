@@ -3,6 +3,7 @@ package com.medtrack.medications;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Entity
@@ -37,7 +38,7 @@ public class Medication {
     this.name = name;
     this.unit = unit;
     this.initialStock = initialStock;
-    this.createdAt = createdAt;
+    this.createdAt = createdAt.truncatedTo(ChronoUnit.MICROS);
   }
 
   public UUID id() {
@@ -73,6 +74,6 @@ public class Medication {
   }
 
   public void archive(Instant now) {
-    if (archivedAt == null) archivedAt = now;
+    if (archivedAt == null) archivedAt = now.truncatedTo(ChronoUnit.MICROS);
   }
 }

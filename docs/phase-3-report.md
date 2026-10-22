@@ -15,8 +15,8 @@
 
 ## Doğrulama
 
-- `./scripts/dev.sh test`: **BUILD SUCCESS**, 36 test, 0 failure/error/skipped.
-- Yeni 13 ilaç entegrasyon testi; önceki 23 auth/foundation testi regresyon olarak geçti.
+- `./scripts/dev.sh test`: **BUILD SUCCESS**, 37 test, 0 failure/error/skipped.
+- Yeni 14 ilaç entegrasyon testi; önceki 23 auth/foundation testi regresyon olarak geçti.
 - Spotless check: 36 Java dosyası temiz.
 - Gerçek PostgreSQL üzerinde üç Flyway migration validate edildi; yeniden migrate 0 değişiklik.
 - Paketlenmiş JAR geliştirme DB'sinde başladı; V3 migration başarıyla uygulandı.
@@ -36,4 +36,4 @@
 
 Smoke test backend'i ve geçici test PostgreSQL servisi durduruldu; geliştirme PostgreSQL açık, verisi korunur. Başlatma: `./scripts/dev.sh run`. Swagger: http://127.0.0.1:8080/swagger-ui/index.html.
 
-GitHub CI'nin güncel sonucu Actions sayfasındadır; yerel test kanıtı yukarıdadır.
+İlk GitHub CI çalışması Linux nanosaniye/PostgreSQL mikrosaniye precision farkını yakaladı: create/archive yanıtı sonraki GET ile eşleşmiyordu. Entity timestamp'leri kayıt öncesi mikrosaniyeye normalize edildi. Test clock'u macOS'ta da nanosaniye üretir; ayrıca deterministik hassasiyet testi eklendi. Sonuç güncel Actions çalışmasından izlenir.

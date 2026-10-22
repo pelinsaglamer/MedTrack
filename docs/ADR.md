@@ -66,3 +66,5 @@ Kaynak: FR-003, SRS §7/8/13 Phase 3 ve AC-08. Yeni ürün özelliği eklenmedi;
 - Swagger persistAuthorization=false; kurgusal örnekler ve redacted DTO string'leri, web/bind log redaction ile birlikte kullanılır.
 
 Kaynak: [springdoc uyumluluk matrisi](https://springdoc.org/#what-is-the-compatibility-matrix-of-springdoc-openapi-with-spring-boot), [Maven Central sürümleri](https://repo.maven.apache.org/maven2/org/springdoc/springdoc-openapi-starter-webmvc-ui/maven-metadata.xml).
+
+Phase 3 CI düzeltmesi: PostgreSQL timestamptz mikrosaniye hassasiyetinde olduğundan medication createdAt/archivedAt kayıt öncesi MICROS'a normalize edilir. İlk create/archive yanıtı sonraki okumayla birebir eşleşir. Entegrasyon test saati alt-mikrosaniye farkını macOS'ta da üretir; nanosaniye fixture testi bu kuralı sabitler.

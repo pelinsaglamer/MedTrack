@@ -3,17 +3,23 @@ package com.medtrack;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.medtrack.auth.*;
+import com.medtrack.medications.Medication;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.net.http.*;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.system.*;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.*;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import tools.jackson.databind.*;
@@ -23,6 +29,7 @@ import tools.jackson.databind.*;
     properties =
         "spring.datasource.url=${TEST_DB_URL:jdbc:postgresql://localhost:5433/medtrack_test}")
 @ActiveProfiles("test")
+@Import(MedicationIntegrationTests.NanosecondClock.class)
 @ExtendWith(OutputCaptureExtension.class)
 class MedicationIntegrationTests {
   @LocalServerPort int port;
@@ -320,5 +327,26 @@ class MedicationIntegrationTests {
     call("GET", "/api/v1/medications", null, access);
     call("PATCH", path(item), Map.of("name", unique, "unit", "x".repeat(41)), access);
     assertFalse(output.getAll().contains(unique));
+  }
+
+  @Test
+  void timestampsUsePostgresMicrosecondsBeforeFirstResponse() {
+    Instant nanos = Instant.parse("2026-10-22T15:00:00.123456789Z");
+    var medication =
+        new Medication(
+            UUID.randomUUID(), UUID.randomUUID(), "Fictional Precision", "tablet", null, nanos);
+    assertEquals(Instant.parse("2026-10-22T15:00:00.123456Z"), medication.createdAt());
+    medication.archive(nanos);
+    assertEquals(Instant.parse("2026-10-22T15:00:00.123456Z"), medication.archivedAt());
+  }
+
+  @TestConfiguration
+  static class NanosecondClock {
+    @Bean
+    @Primary
+    Clock highPrecisionClock() {
+      // Reproduce Linux sub-microsecond timestamps even on a macOS host clock.
+      return Clock.offset(Clock.systemUTC(), Duration.ofNanos(789));
+    }
   }
 }

@@ -93,3 +93,5 @@ Name/unit alanları bağımsız güncellenebilir; omitted/null alan değişmez. 
 Page şekli: `{"content":[View],"page":0,"size":20,"totalElements":1,"totalPages":1}`. Page 0–10000, size 1–100; sınır dışı 422. Sıralama createdAt DESC + id DESC. includeArchived=false yalnız aktif kayıtları getirir, true aktif ve arşivleri getirir. Hatalı UUID/query tipi 400; kimliksiz erişim 401; DELETE desteklenmez (kimliği doğrulanmış istek için 405).
 
 Swagger: `/swagger-ui/index.html`; OpenAPI: `/v3/api-docs`. Önce login, sonra Authorize alanına accessToken girilir. Token kalıcı saklanmaz. Şema/arayüz erişimi auth gerektirmez; domain çağrıları gerektirir.
+
+Medication createdAt/archivedAt değerleri UTC ISO-8601 olarak PostgreSQL mikrosaniye hassasiyetine normalize edilir; ilk yazma yanıtı ve sonraki GET aynı zamanı döndürür.
