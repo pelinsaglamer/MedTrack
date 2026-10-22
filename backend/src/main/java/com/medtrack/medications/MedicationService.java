@@ -15,11 +15,17 @@ public class MedicationService {
   private final MedicationRepository medications;
   private final CurrentUser current;
   private final Clock clock;
+  private final com.medtrack.schedules.ScheduleLifecycle schedules;
 
-  public MedicationService(MedicationRepository medications, CurrentUser current, Clock clock) {
+  public MedicationService(
+      MedicationRepository medications,
+      CurrentUser current,
+      Clock clock,
+      com.medtrack.schedules.ScheduleLifecycle schedules) {
     this.medications = medications;
     this.current = current;
     this.clock = clock;
+    this.schedules = schedules;
   }
 
   @Transactional
@@ -66,7 +72,10 @@ public class MedicationService {
       throw invalid("archived", "Only archiving is supported");
     if (input.name() != null) medication.rename(clean(input.name(), "name"));
     if (input.unit() != null) medication.changeUnit(clean(input.unit(), "unit"));
-    if (Boolean.TRUE.equals(input.archived())) medication.archive(clock.instant());
+    if (Boolean.TRUE.equals(input.archived())) {
+      medication.archive(clock.instant());
+      schedules.stopAt(id, medication.archivedAt(), medication.archivedAt());
+    }
     return MedicationDtos.View.from(medications.saveAndFlush(medication));
   }
 

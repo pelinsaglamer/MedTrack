@@ -68,3 +68,25 @@ Kaynak: FR-003, SRS §7/8/13 Phase 3 ve AC-08. Yeni ürün özelliği eklenmedi;
 Kaynak: [springdoc uyumluluk matrisi](https://springdoc.org/#what-is-the-compatibility-matrix-of-springdoc-openapi-with-spring-boot), [Maven Central sürümleri](https://repo.maven.apache.org/maven2/org/springdoc/springdoc-openapi-starter-webmvc-ui/maven-metadata.xml).
 
 Phase 3 CI düzeltmesi: PostgreSQL timestamptz mikrosaniye hassasiyetinde olduğundan medication createdAt/archivedAt kayıt öncesi MICROS'a normalize edilir. İlk create/archive yanıtı sonraki okumayla birebir eşleşir. Entegrasyon test saati alt-mikrosaniye farkını macOS'ta da üretir; nanosaniye fixture testi bu kuralı sabitler.
+
+## Phase 4 — versioned schedules / occurrences
+
+Kaynak: FR-004/005/012/014, BR-01/03, §7/8/10.1/13 ve AC-01/06/08'in backend plan kapsamı. Kaynak SRS değişmedi; tıbbi öneri, otomatik TAKEN veya bildirim garantisi eklenmedi.
+
+- V4: schedule_versions + schedule_times + dose_occurrences. Metadata JPA, occurrence insert/read parametrik JDBC; aynı datasource/transaction. Backend katmanları korunur.
+- Miktar pozitif BigDecimal/NUMERIC(19,6), 13 tamsayı/6 ondalık. Saatler tam HH:mm, unique ve sıralı, 1–1440 slot (bir günün dakika sayısı); geçerli IANA zone; tarih aralığı doğrulanır. Null endDate açık uçludur; endDate dahildir.
+- İstenen start/end tarihleri immutable kalır; gerçek aktif aralık ayrı UTC `[effectiveFrom,effectiveUntil)` ile saklanır. PostgreSQL btree_gist exclusion constraint aynı ilaçta aralık çakışmasını engeller. V4 migration rolü btree_gist kurabilmelidir (geliştirme/CI PostgreSQL imajında hazırdır).
+- İlaç başına UUID ile owner-scoped satır kilidi schedule edit, generation ve archive işlemlerini serileştirir. Versions numarası bu kilit altında artar. Günlük okuma çoklu ilaç kilitlerini UUID sırasıyla alır.
+- İlk plan geçmiş startDate kabul eder. İlk oluşturma tarihinden önceki gerçek alım iddiası oluşturulmaz; türetilen plan slotları yalnız PENDING/DUE'dur. Revizyon geçmiş yerel güne uygulanamaz.
+- Gelecek revizyon o günün plan zone'unda gece yarısında başlar. Bugün revizyonu mikro hassasiyetli request instant +1 microsecond ile başlar; tam değişim anındaki mevcut doz korunur ve tekrar üretilmez.
+- Önceki aralıklar yeni sınırda kapanır. Daha ileride bekleyen eski sürümler boş `[from,from)` aralığa kapatılır; kimlikleri ve tanımları saklanır. Future pending occurrences silinir ve yeni sürümden üretilir. Gelecekte teyit edilmiş kayıt varsa rewrite 409 SCHEDULE_CONFLICT döner.
+- İlk plan sonrası tüm PENDING geçmiş kayıtlar ve onaylı durumlar korunur. Current quantity/times/timezone eski sürümde değiştirilmez. Occurrence ilaç adı/birim snapshot'ı taşır; metadata edit'i mevcut geçmiş satırları değiştirmez.
+- DST gap: ZoneRules geçiş süresi kadar ileri kaydır; overlap: earlier offset seç ve tek slot üret. 30 dakika geçişleri de aynı kurala uyar. UTC instant yanında hedef localDate/localTime ve sürümün IANA zone'u saklanır.
+- Occurrence ID version UUID + local date + slot UUID'den deterministik üretilir; unique(version,date,slot) ve unique(version,UTC,slot), INSERT ON CONFLICT ile retry/parallel generation tekilleşir.
+- Plan yazımı ve günlük okuma hesap zone'unda bugün +13 gün ufkunu tamamlar. Günlük okuma eski tarihse o günün eksik plan slotları da tarihsel sürümden üretilir. Background scheduler eklenmedi; bu tetikleme biçimi API sözleşmesinde açıklanır.
+- GET /doses date filtrelemesi hesabın IANA zone'undaki günün UTC sınırlarıyla yapılır; 23/25 saatlik günler 24 saat varsayımı kullanmaz. Yanıttaki localDate/time schedule'ın hedef zone'undadır ve hesap gününden farklı olabilir.
+- Read status: dueAt > now PENDING, aksi DUE. Otomatik TAKEN/SKIPPED yok. MISSED takip süresi SRS'de belirsizdir; Phase 5'te netleştirilecek. Veritabanı gelecekteki beş status değerini destekler.
+- Archive bugüne kadarki kayıtları tutar, pending future'ı kaldırır ve aktif aralıkları kapatır. Notification cancellation mobil bildirim fazında uygulanacak.
+- UTC timestamp'ler PostgreSQL micro precision ile saklanır. Eski Flyway migration'ları değiştirilmedi.
+
+Referanslar: [Java ZonedDateTime](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/time/ZonedDateTime.html), [PostgreSQL range exclusions](https://www.postgresql.org/docs/17/rangetypes.html#RANGETYPES-CONSTRAINT).

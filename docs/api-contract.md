@@ -1,6 +1,6 @@
-# API sözleşmesi — Phase 1–3
+# API sözleşmesi — Phase 1–4
 
-Kaynak: SRS §8. Domain API tabanı `/api/v1`; auth/account ve ilaç endpointleri aşağıdadır; schedule/doz/stok endpointleri ilgili fazlarında uygulanacak.
+Kaynak: SRS §8. Domain API tabanı `/api/v1`; auth/account ve ilaç endpointleri aşağıdadır; schedule ve günlük doz endpointleri aşağıdadır; dose actions ve stok kendi fazlarında uygulanacak.
 
 Mevcut operasyonel endpoint: `GET /actuator/health`, DB erişilebilirken `200 {"status":"UP"}`; erişilemezken 503. Bileşen ayrıntıları kapalıdır.
 
@@ -95,3 +95,39 @@ Page şekli: `{"content":[View],"page":0,"size":20,"totalElements":1,"totalPages
 Swagger: `/swagger-ui/index.html`; OpenAPI: `/v3/api-docs`. Önce login, sonra Authorize alanına accessToken girilir. Token kalıcı saklanmaz. Şema/arayüz erişimi auth gerektirmez; domain çağrıları gerektirir.
 
 Medication createdAt/archivedAt değerleri UTC ISO-8601 olarak PostgreSQL mikrosaniye hassasiyetine normalize edilir; ilk yazma yanıtı ve sonraki GET aynı zamanı döndürür.
+
+## Phase 4 — schedules / daily doses
+
+### POST /api/v1/medications/{medicationId}/schedules
+
+JWT gerekir; ilaç sahibine ait olmalı ve arşivli olmamalıdır. Create veya plan değişikliği aynı endpoint ile yeni sürüm oluşturur; 201 döner.
+
+```json
+{"times":["09:00","21:00"],"quantityPerDose":"1","timezone":"Europe/Istanbul","startDate":"2026-10-22","endDate":null}
+```
+
+Yanıt: id, medicationId, version (1'den artar), sıralı times, quantityPerDose (string), timezone, startDate, endDate, effectiveFrom/effectiveUntil UTC ve createdAt. Saatler benzersiz tam HH:mm, boş olmayan liste; miktar >0, en fazla 13 tamsayı/6 ondalık; IANA zone; endDate >= startDate (dahil). Eksik/uygunsuz alan 422, bozuk tarih/tip/bilinmeyen JSON alanı 400. ownerId/userId kabul edilmez. Başkasının/olmayan ilaç 404, arşivli ilaç veya gelecekte teyit edilmiş kayıtlarla çakışma 409 SCHEDULE_CONFLICT.
+
+İlk plan geçmiş startDate alabilir; revizyon geçmiş güne uygulanamaz (422). Yeni startDate bugünün plan zone günüyse sınır request instant sonrası ilk microsecond; gelecekteyse o zone'da gün başlangıcıdır. Önceki sürümlerin aktif aralıkları kısaltılır, değişim öncesi occurrence'lar korunur. Daha ilerideki bekleyen sürümler yeni planla geçersiz kılınabilir; sürüm satırları silinmez. Yeni sürüm endDate'inden sonra eski plan kendiliğinden yeniden başlamaz.
+
+### GET /api/v1/doses?date=2026-10-22&page=0&size=20
+
+JWT gerekir. Date yoksa hesap timezone'unda bugün; geçmiş gün veya hesapta bugün +13 güne kadar kabul edilir. Gün filtresi hesabın timezone'undaki `[gece yarısı, ertesi gece yarısı)` UTC aralığıdır. Page 0–10000; size 1–100 (varsayılan 20), sınır dışı 422; bozuk date/parametre tipi 400.
+
+```json
+{
+  "content":[{
+    "id":"UUID","medicationId":"UUID","scheduleVersionId":"UUID","scheduleVersion":1,
+    "medicationName":"Example Medicine A","unit":"tablet","quantityPerDose":"1",
+    "dueAtUtc":"2026-10-22T06:00:00Z","localDate":"2026-10-22","localTime":"09:00",
+    "timezone":"Europe/Istanbul","status":"DUE"
+  }],
+  "date":"2026-10-22","timezone":"Europe/Istanbul","page":0,"size":20,"totalElements":1,"totalPages":1
+}
+```
+
+Sıralama dueAtUtc ASC + id ASC; yalnız owner kayıtları. `localDate/localTime/timezone` planın hedefini gösterir. DST gap'te UTC karşılığı ilerletilir, hedef saat değişmez; overlap'te ilk offset ile tek occurrence. Üretim tekrarı UUID'yi değiştirmez.
+
+Okuma sırasında 14 günlük ufuk idempotent tamamlanır; geçmiş gün istenirse o günkü sürüme göre eksik slotlar tamamlanır. Bu kayıtlar planlanan olaylardır; gerçek alımı kanıtlamaz. PENDING/DUE zamandan türetilir; mevcut TAKEN/SKIPPED/MISSED durumları varsa korunur. Bu fazda action endpointi, stock tüketimi veya otomatik MISSED eşiği yoktur.
+
+Medication archive sonrası geçmiş saklanır, gelecekteki pending occurrences kaldırılır. Mevcut occurrence ad/birim snapshot'ları medication edit'inden etkilenmez. Swagger bu endpointleri Bearer güvenlik modeliyle gösterir.

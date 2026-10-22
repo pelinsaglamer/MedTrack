@@ -14,6 +14,9 @@ public interface MedicationRepository extends JpaRepository<Medication, UUID> {
 
   Page<Medication> findByUserIdAndArchivedAtIsNull(UUID userId, Pageable pageable);
 
+  @Query("select m.id from Medication m where m.userId=:owner order by m.id")
+  java.util.List<UUID> findOwnerIds(@Param("owner") UUID owner);
+
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("select m from Medication m where m.id=:id and m.userId=:owner")
   Optional<Medication> findOwnedForUpdate(@Param("id") UUID id, @Param("owner") UUID owner);

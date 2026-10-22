@@ -28,7 +28,7 @@ public class OpenApiConfig {
                 .title("MedTrack API")
                 .version("v1")
                 .description(
-                    "SRS v1.0; Phase 3 medication CRUD. Fictional test data only. Local development uses HTTP; hosted environments require HTTPS."))
+                    "SRS v1.0; Phase 4 schedules and daily doses. Fictional test data only. Local development uses HTTP; hosted environments require HTTPS."))
         .components(
             new Components()
                 .addSecuritySchemes(

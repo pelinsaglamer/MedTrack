@@ -50,3 +50,23 @@ Sahiplik senaryosu test classpath'inde bulunan fixture endpointinde ortak guard'
 - İlaç adının oluşturma/okuma/listeme/hatalı güncellemede loglara çıkmaması.
 
 Toplam 37 test: 23 önceki faz regresyonu + 14 yeni test. `./scripts/dev.sh test` build, entegrasyon ve Spotless kontrolünü çalıştırır. Üç migration için validate/no-op testi geçer. Tam AC-01 schedule ve mobil fazlarını bekler; ledger ve stok doğruluğu Phase 5'te test edilecek.
+
+## Phase 4 — FR-004/005/012/014 altyapısı, BR-01/03, AC-01/06/08 backend plan kapsamı
+
+18 ScheduleIntegrationTests + 6 ScheduleTimeResolverTests:
+
+- 09:00/21:00 iki occurrence, UTC karşılığı, miktar, PENDING/DUE ve 14 günlük ufuk.
+- Inclusive başlangıç/bitiş; yarın revizyonunda dün/bugün snapshot ve UUID'lerinin korunması.
+- Aynı gün revizyonu, tam doz anında revizyon, bekleyen gelecekteki sürümün yeniden değiştirilmesi.
+- Duplicate/bad HH:mm, boş liste, pozitif miktar/precision, IANA zone, tarih aralığı, owner spoof, geriye tarihli revizyon ve archived medication doğrulaması.
+- Auth ve başka kullanıcının schedule write/dose read izolasyonu; account-day ve schedule local-date ayrımı.
+- Archive future cleanup/no regeneration; eski occurrence ad/birim snapshot'larının korunması; sensitive name log redaction.
+- Rolling horizon ilerlemesi ve eski dozların otomatik TAKEN/MISSED olmaması.
+- Paged dose list, tarih ufku ve Swagger yolları.
+- Eşzamanlı revizyon/read tekilleştirmesi; gelecekte teyit edilmiş fixture kaydının overwrite edilmemesi.
+- PostgreSQL overlap SQLSTATE 23P01 ve duplicate occurrence SQLSTATE 23505 kontrolleri.
+- Istanbul normal zaman, Berlin spring gap/autumn overlap, New York geçişleri, Lord Howe 30 dakika gap ve 23 saatlik günlük fark.
+
+Toplam 61 test: önceki 37 regresyon + 24 yeni kontrol. Dört migration validate/no-op; 51 Java dosyası Spotless kontrolünde temiz. `./scripts/dev.sh test` ile çalıştırılır. Test clock'u nanosaniyeli sabit instant kullanır; timezone/DST senaryoları işletim sistemi saatine bağlı değildir.
+
+TAKEN/SKIPPED/UNDO/idempotent stock action API'leri Phase 5 kapsamındadır. SQL ile verilen TAKEN fixture'ı yalnız geçmiş/gelecek koruma testidir, üretimde otomatik TAKEN davranışı değildir. MISSED için takip eşiği onayı beklenir; bildirim yenilemesi Phase 8 kabulüdür.

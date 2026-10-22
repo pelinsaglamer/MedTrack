@@ -4,7 +4,7 @@ Türkçe ilaç planı ve stok takibi uygulaması. Ana gereksinim kaynağı [SRS]
 
 ## Durum
 
-Phase 0–3 yerel kabul kontrolleri tamamlandı. Ayrıntılı durum ve sonraki aşamalar: [proje panosu](docs/project-board.md). Mobil uygulama Phase 6'da başlayacak.
+Phase 0–4 yerel kabul kontrolleri tamamlandı. Ayrıntılı durum ve sonraki aşamalar: [proje panosu](docs/project-board.md). Mobil uygulama Phase 6'da başlayacak.
 
 ## Gereksinimler
 
@@ -44,7 +44,7 @@ curl http://127.0.0.1:8080/actuator/health
 - `mobile/`: Phase 6 için yer tutucu.
 - `.github/workflows/backend.yml`: Java 21 + PostgreSQL üzerinde build/test/format kontrolü.
 
-Backend şu anda yerel geliştirme içindir. Kayıt/giriş, refresh rotasyonu, çıkış, hesap erişimi ve owner-scoped ilaç CRUD/arşivleme uygulanmıştır. Hosted ortamlarda SRS gereği HTTPS kullanılmalı; mevcut loopback HTTP kurulumu hosted kabul kriterini karşılamaz.
+Backend şu anda yerel geliştirme içindir. Kayıt/giriş, refresh rotasyonu, çıkış, hesap erişimi ve owner-scoped ilaç CRUD/arşivleme, sürümlü günlük planlar ve günlük doz görünümü uygulanmıştır. Hosted ortamlarda SRS gereği HTTPS kullanılmalı; mevcut loopback HTTP kurulumu hosted kabul kriterini karşılamaz.
 
 ## Doğrulama
 
@@ -55,7 +55,7 @@ cd backend
 # Java kaynaklarını biçimlendirmek için: ./mvnw spotless:apply
 ```
 
-GitHub reposu: [pelinsaglamer/MedTrack](https://github.com/pelinsaglamer/MedTrack). `main` dalına push ve pull request olayları [Backend CI](https://github.com/pelinsaglamer/MedTrack/actions/workflows/backend.yml) kontrolünü başlatır. Güncel uzak çalıştırma sonucu Actions sayfasından izlenir. Yerel sonuçlar [Phase 0–1 raporunda](docs/phase-0-1-report.md), [Phase 2 raporunda](docs/phase-2-report.md) ve [Phase 3 raporunda](docs/phase-3-report.md).
+GitHub reposu: [pelinsaglamer/MedTrack](https://github.com/pelinsaglamer/MedTrack). `main` dalına push ve pull request olayları [Backend CI](https://github.com/pelinsaglamer/MedTrack/actions/workflows/backend.yml) kontrolünü başlatır. Güncel uzak çalıştırma sonucu Actions sayfasından izlenir. Yerel sonuçlar [Phase 0–1 raporunda](docs/phase-0-1-report.md), [Phase 2 raporunda](docs/phase-2-report.md) , [Phase 3 raporunda](docs/phase-3-report.md) ve [Phase 4 raporunda](docs/phase-4-report.md).
 
 Gerçek sağlık verisi, parola veya token repoya eklenmez. Uygulama tıbbi tavsiye ve garantili bildirim sağlamaz.
 
@@ -84,6 +84,22 @@ Sunucu çalışırken [Swagger UI](http://127.0.0.1:8080/swagger-ui/index.html) 
 3. Dönen `accessToken` değerini **Authorize → bearerAuth** alanına girin (yalnız token değeri).
 4. `/api/v1/medications` üzerinden ilaç oluşturun/listeleyin; `/{id}` üzerinden okuyun, PATCH ile düzenleyin veya `{"archived":true}` gönderin.
 
-İlaç adı/birim zorunlu; liste varsayılan olarak yalnız aktif kayıtları, sayfa başına 20 (en fazla 100) kayıt döndürür. Arşivleri görmek için `includeArchived=true`. `initialStock` isteğe bağlı, hassas ondalık başlangıç girdisidir; PATCH ile değişmez. Güncel stok/ledger ve hareketleri Phase 5'te uygulanacaktır. Kullanım planları Phase 4 kapsamındadır.
+İlaç adı/birim zorunlu; liste varsayılan olarak yalnız aktif kayıtları, sayfa başına 20 (en fazla 100) kayıt döndürür. Arşivleri görmek için `includeArchived=true`. `initialStock` isteğe bağlı, hassas ondalık başlangıç girdisidir; PATCH ile değişmez. Güncel stok/ledger ve hareketleri Phase 5'te uygulanacaktır. Kullanım planları Phase 4 kapsamında aşağıda açıklanır.
 
 Dokümantasyon rotaları yalnız şemayı gösterir; ilaç endpointleri JWT gerektirir. Swagger token'ı kalıcı saklamaz. Tam sözleşme [API belgesindedir](docs/api-contract.md).
+
+## Planlar ve günlük dozlar — Phase 4
+
+Swagger'da ilaç oluşturduktan sonra `POST /api/v1/medications/{medicationId}/schedules` ile günlük plan oluşturun:
+
+```json
+{"times":["09:00","21:00"],"quantityPerDose":"1","timezone":"Europe/Istanbul","startDate":"2026-10-22","endDate":null}
+```
+
+`GET /api/v1/doses?date=2026-10-22` ile günlük kayıtlar görülür. Tarih verilmezse hesabın saat diliminde bugün kullanılır. `page` ve `size` desteklenir. Kayıtlar UTC zamanının yanında hedef yerel tarih/saat, IANA zone, plan sürümü ve miktarı içerir.
+
+Aynı POST ile yeni sürüm oluşturulur. Yarın için değişiklikte dün ve bugün korunur; bugünkü revizyon isteğin hemen sonrasından itibaren etkilidir. Eski sürümler silinmez. Geleceğe planlanmış sürümler de yeni sınırdan itibaren yeniden düzenlenebilir. Arşivleme geçmişi korur, gelecekteki bekleyen dozları kaldırır.
+
+İleri DST boşluğunda saat geçiş süresi kadar ileri taşınır; geri geçişte ilk offset ile tek occurrence oluşturulur. `localTime` her zaman hedeflenen saati korur. Üretim/okuma tekrarlandığında occurrence UUID'si sabittir. Plan yazma/günlük okuma sırasında 14 günlük ufuk üretilir; geçmiş gün gerektiğinde o zamanki sürümden tamamlanır.
+
+`PENDING` gelecekteki, `DUE` zamanı gelmiş ve teyit bekleyen kayıttır. Bunlar ilaç alımı teyidi değildir. TAKEN/SKIPPED/UNDO ve stok hareketi Phase 5'te eklenecek. MISSED takip eşiği SRS'de sayısal tanımlı olmadığı için otomatik eşik eklenmedi.
