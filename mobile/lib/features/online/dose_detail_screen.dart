@@ -6,6 +6,7 @@ import '../../shared/design.dart';
 import 'data.dart';
 import 'models.dart';
 import 'widgets.dart';
+import '../notifications/notification_controller.dart';
 
 class DoseDetailScreen extends ConsumerStatefulWidget {
   const DoseDetailScreen({super.key, required this.id});
@@ -23,9 +24,24 @@ class _DoseDetailState extends ConsumerState<DoseDetailScreen> {
   Future<void> _send() async {
     setState(() => _error = null);
     try {
+      final snooze =
+          ref
+              .read(operationsProvider)[scope]
+              ?.input
+              .containsKey('snoozedUntil') ??
+          false;
       final result = await ref.read(operationsProvider.notifier).send(scope);
       if (!mounted || result == null) return;
-      refreshOnline(ref);
+      refreshOnline(ref, doseChanged: widget.id);
+      if (snooze) {
+        final notifications = ref.read(notificationControllerProvider);
+        setState(
+          () => _notice = notifications.enabled && notifications.allowed
+              ? 'Hatırlatma ertelendi. Plan, doz teyidi ve stok değişmedi.'
+              : 'Hatırlatma zamanı kaydedildi; cihaz bildirimleri kapalı. Hatırlatma ayarlarını kontrol et. Plan ve stok değişmedi.',
+        );
+        return;
+      }
       final warnings = ((result['balance'] as Json)['warnings'] as List)
           .cast<String>();
       setState(
@@ -38,7 +54,7 @@ class _DoseDetailState extends ConsumerState<DoseDetailScreen> {
     } catch (e) {
       if (mounted) {
         setState(() => _error = e);
-        refreshOnline(ref);
+        refreshOnline(ref, doseChanged: widget.id);
       }
     }
   }
@@ -67,6 +83,48 @@ class _DoseDetailState extends ConsumerState<DoseDetailScreen> {
         'recordedAt': DateTime.now().toUtc().toIso8601String(),
         'expectedVersion': dose.version,
         if (action == 'UNDO') 'undoActionId': dose.lastActionId,
+      },
+    );
+    await _send();
+  }
+
+  Future<void> _snooze(Dose dose) async {
+    if (_confirming || ref.read(operationsProvider).containsKey(scope)) return;
+    _confirming = true;
+    final minutes = await showDialog<int>(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Hatırlatmayı ertele'),
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'Yalnız sonraki hatırlatma değişir. Bu işlem ilacı aldığın veya atladığın anlamına gelmez.',
+            ),
+          ),
+          for (final minutes in [5, 10, 15, 30])
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(context, minutes),
+              child: Text('$minutes dakika'),
+            ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Vazgeç'),
+          ),
+        ],
+      ),
+    );
+    _confirming = false;
+    if (minutes == null || !mounted) return;
+    ref.read(operationsProvider.notifier).begin(
+      scope,
+      '/doses/${dose.id}/snoozes',
+      {
+        'snoozedUntil': DateTime.now()
+            .toUtc()
+            .add(Duration(minutes: minutes))
+            .toIso8601String(),
+        'expectedVersion': dose.version,
       },
     );
     await _send();
@@ -104,6 +162,10 @@ class _DoseDetailState extends ConsumerState<DoseDetailScreen> {
                 statusLabel(d.status),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
+              if (d.snoozedUntil != null)
+                Text(
+                  'Ertelenen hatırlatma: ${displayInstant(d.snoozedUntil!)}',
+                ),
               if (d.recordedAt != null)
                 Text(
                   'Son bildirdiğin kayıt zamanı: ${displayInstant(d.recordedAt!)}',
@@ -122,7 +184,7 @@ class _DoseDetailState extends ConsumerState<DoseDetailScreen> {
               ErrorNotice(_error),
               if (pending != null) ...[
                 Text(
-                  '${statusLabel(pending.input['action'] as String)} işleminin sonucu henüz doğrulanmadı. Tekrar deneme aynı işlemi kontrol eder; ikinci stok hareketi oluşturmaz.',
+                  '${pending.input.containsKey('snoozedUntil') ? 'Hatırlatmayı ertele' : statusLabel(pending.input['action'] as String)} işleminin sonucu henüz doğrulanmadı. Tekrar deneme aynı işlemi kontrol eder; ikinci stok hareketi oluşturmaz.',
                 ),
                 FilledButton(
                   onPressed: pending.busy ? null : _send,
@@ -143,6 +205,11 @@ class _DoseDetailState extends ConsumerState<DoseDetailScreen> {
                       OutlinedButton(
                         onPressed: () => _act(d, 'SKIPPED'),
                         child: const Text('Atladım'),
+                      ),
+                    if (d.canConfirm)
+                      OutlinedButton(
+                        onPressed: () => _snooze(d),
+                        child: const Text('Hatırlatmayı ertele'),
                       ),
                     if (d.canUndo)
                       OutlinedButton(

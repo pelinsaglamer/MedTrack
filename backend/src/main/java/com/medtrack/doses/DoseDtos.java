@@ -22,7 +22,8 @@ public final class DoseDtos {
       long version,
       UUID lastActionId,
       Instant recordedAt,
-      Instant missedAt) {
+      Instant missedAt,
+      Instant snoozedUntil) {
     @Override
     public String toString() {
       return "DoseView[REDACTED]";

@@ -14,6 +14,9 @@ import 'package:medtrack/features/online/data.dart';
 import 'phase6_test.dart' show waitFor;
 
 Future<void> tapText(WidgetTester tester, String text) async {
+  // Settle keyboard resizing before scrolling a lazily built form button.
+  FocusManager.instance.primaryFocus?.unfocus();
+  await tester.pumpAndSettle();
   final finder = find.text(text).last;
   await tester.ensureVisible(finder);
   await tester.pumpAndSettle();

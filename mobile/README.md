@@ -1,6 +1,6 @@
-# MedTrack mobil — Phase 6–7
+# MedTrack mobil — Phase 6–8
 
-Android öncelikli Türkçe online istemci. Riverpod seçimi kullanıcı tarafından onaylandı. Phase 7'de ilaç, plan, günlük/geçmiş doz, teyit/UNDO, stok ve haftalık özet akışları tamamlandı. Bildirimler Phase 8'de, offline DB/sync Phase 9'da.
+Android öncelikli Türkçe online istemci. Riverpod seçimi kullanıcı tarafından onaylandı. Phase 7'de ilaç, plan, günlük/geçmiş doz, teyit/UNDO, stok ve haftalık özet akışları tamamlandı. Phase 8 Android bildirimleri eklendi; fiziksel cihaz testi ertelendi. Offline DB/sync Phase 9'da.
 
 
 ## Çalıştırma
@@ -78,3 +78,31 @@ APK: `build/app/outputs/flutter-apk/app-debug.apk` (Git'e eklenmez). iOS, Xcode/
 Belirsiz doz/stok isteğinde “Aynı işlemi tekrar dene” özgün kimlik ve payload'ı kullanır. Bu kayıt yalnız mevcut session belleğinde tutulur; uygulamayı kapatıp açma veya offline queue garantisi Phase 9'a aittir. Yeni ilaç/plan oluşturma yanıtı belirsizse kör tekrar yerine liste/plan geçmişi kontrol edilir. Formlar ondalık virgülü noktaya dönüştürür; floating point hesap yapmaz.
 
 Tüm native akış testleri için backend açıkken `flutter test integration_test -d emulator-5554` çalıştır. `phase7_test.dart` kurgusal hesapla online ilaç/plan/TAKEN/UNDO/SKIPPED/stock/edit/archive akışını kontrol eder. Testler geliştirme emülatöründe kurgusal session kullanır ve çıkışla biter; kişisel hesabını kullanmaz. Fixture'lar geliştirme DB'sinde kalır.
+
+
+## Phase 8 — bildirim kullanımı ve test
+
+İlaçlarım → zil → Hatırlatma ayarları. Uygulama kendiliğinden izin istemez; açıklamayı okuduktan sonra hatırlatmaları aç. Varsayılan içerikte ilaç adı yoktur. İzin reddi ilaç/doz akışlarını engellemez. Daha hassas zamanlama isteğe bağlıdır; izin yoksa yaklaşık zamanlama kullanılır. Pil kısıtları ve force-stop dahil OS davranışları teslimi etkileyebilir; kesin alarm garantisi yoktur.
+
+Doz detayındaki erteleme 5/10/15/30 dakika seçenekleri sunar. Plan ve stok değişmez; teyit edilen veya gelecekteki doz ertelenemez. Erteleme kaydı saklanır; cihazda aktif bildirim için bildirimlerin açık olması gerekir. Sonraki 14 günlük plan uygulama açıldığında/geri dönüldüğünde ve mutasyon sonrasında yenilenir; en yakın 200 aday için kurulum yapılır. Çıkış bütün cihaz hatırlatmalarını temizler; tekrar girişte bu hesap için yeniden açmak gerekir.
+
+Backend açık ve Android emülatörü bağlıyken:
+
+```sh
+python3 tool/notification_emulator_test.py --mode denied
+python3 tool/notification_emulator_test.py --mode inexact
+python3 tool/notification_emulator_test.py --mode granted
+python3 tool/notification_emulator_test.py --mode tap
+```
+
+Helper yalnız emulator-* cihazlarını kabul eder; kurgusal fixture ile test APK'sını kurup izin durumunu ayarlar. Bu testler emülatördeki oturumu kurgusal test oturumuyla değiştirir; geliştirme hesabınla yeniden giriş gerekebilir. `persistTap` modu bildirimleri reboot/upgrade gözlemi için bırakır. Bu mod sonrası normal debug APK'yı kurup uygulamayı aç; normal arka plana alma ile force-stop'u birbirine karıştırma. Normal `flutter test integration_test` bildirim senaryosu için önceden verilmiş POST_NOTIFICATIONS ve exact alarm izni varsayar; tam izin matrisi için helper kullanılır. Yerel fixture'lar geliştirme DB'sinde kalır.
+
+Native test sonrasında normal uygulama giriş noktasını geri kur:
+
+```sh
+flutter build apk --debug
+adb -s emulator-5554 install -r build/app/outputs/flutter-apk/app-debug.apk
+adb -s emulator-5554 shell am start -n com.medtrack.medtrack/.MainActivity
+```
+
+Emülatör gözlemleri ve ertelenen gerçek cihaz matrisi [Phase 8 raporundadır](../docs/phase-8-report.md). iOS bu fazda derlenmedi/test edilmedi.

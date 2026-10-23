@@ -31,6 +31,8 @@ class ApiFailure implements Exception {
     'VALIDATION_ERROR' => 'Girdiğiniz alanları kontrol edin.',
     'NETWORK' =>
       'Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.',
+    'NOTIFICATION_CLEANUP' =>
+      'Bildirimler temizlenemedi. Sistem ayarlarını kontrol edip tekrar dene.',
     'SECURE_STORAGE' => 'Güvenli oturum kaydına erişilemiyor. Tekrar deneyin.',
     _ => 'İşlem tamamlanamadı. Lütfen tekrar deneyin.',
   };

@@ -84,7 +84,7 @@ class _PlanState extends ConsumerState<ScheduleFormScreen> {
             },
           );
       if (mounted) {
-        refreshOnline(ref);
+        refreshOnline(ref, medicationChanged: widget.id);
         context.go('/medications/${widget.id}');
       }
     } catch (e) {
@@ -116,7 +116,7 @@ class _PlanState extends ConsumerState<ScheduleFormScreen> {
                 : today,
             onRetry: () {
               ref.invalidate(accountProvider);
-              refreshOnline(ref);
+              refreshOnline(ref, medicationChanged: widget.id);
             },
             builder: (_) => const SizedBox.shrink(),
           ),
@@ -243,7 +243,7 @@ class _PlanState extends ConsumerState<ScheduleFormScreen> {
                   ),
                   TextButton(
                     onPressed: () {
-                      refreshOnline(ref);
+                      refreshOnline(ref, medicationChanged: widget.id);
                       context.go('/medications/${widget.id}');
                     },
                     child: const Text('Plan geçmişini kontrol et'),

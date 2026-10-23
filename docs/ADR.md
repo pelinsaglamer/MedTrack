@@ -7,7 +7,7 @@ Kaynak: SRS v1.0, §6.2 ve Appendix B. 22 Ekim 2026. SRS'deki ADR numaraları ko
 | ADR-01 Flutter/Dart | SRS kararı | Phase 6; Android önceliği handoff ile uyumlu, iOS kurulumu henüz yok |
 | ADR-02 Spring Boot + JPA | SRS kararı | Java 21, Spring Boot 4.1.2; katmanlı modüler monolit |
 | ADR-03 PostgreSQL + Flyway | SRS kararı | PostgreSQL 17.6; Hibernate `validate`; şemayı yalnız migration değiştirir |
-| ADR-04 Cihazda bildirim | SRS kararı | Phase 8; best effort, izin farkındalığı |
+| ADR-04 Cihazda bildirim | Phase 8 uygulandı; fiziksel cihaz testi ertelendi | Android local, permission-aware ve best effort; emülatör kanıtları raporda |
 | ADR-05 UUID/idempotency | Phase 5 uygulandı | Backend işlem registry/replay; offline queue Phase 9 |
 | ADR-06 Değişmez geçmiş + schedule version | SRS kararı | Phase 4/5 |
 | ADR-07 Yerel DB | Kütüphane açık | Drift/SQLite önerisi Phase 9 öncesi görüşülecek |
@@ -136,3 +136,17 @@ Kaynaklar: [Flutter routing](https://docs.flutter.dev/ui/navigation), [Riverpod 
 - Miktarlarda double kullanılmaz. Hesap-zone gün anahtarları backend'den gelir; istemcinin gün/hafta anahtarı aritmetiği UTC takvim tarihidir. Plan bölgeleri ve UTC action zamanları ayrı etiketlenir.
 - Mobil doz detayı/plan geçmişi için iki owner-scoped okuma API'si eklendi; yeni şema/migration veya auth politikası yoktur. History pagination lazy mapping transaction içinde yapılır; collection fetch ile sayfa sınırı bellekte uygulanmaz.
 - Stok rozeti mevcut sayfadaki ilaçlar için sınırlı inventory okumaları kullanır; büyük veri optimizasyonu/performance gate Phase 10 değerlendirmesine bırakılır.
+
+
+## Phase 8 — Android yerel hatırlatmalar
+
+Kullanıcı fiziksel cihaz testini şimdilik erteleyip emülatörle devam etmeyi seçti. Flutter local notifications 22.3.2 ve timezone 0.11.2 lockfile ile sabitlendi. Android ilk platformdur; iOS desteği doğrulanmadı.
+
+- Backend IANA/DST çözümünün ürettiği UTC anı zonedSchedule'a UTC konumuyla verilir; özellikle snooze'un overlap'in ikinci saatine düşmesi tekrar yerel saat çözümüyle kaydırılmaz. Cihaz timezone değişimi planı değiştirmez. Periyodik local recurrence yerine occurrence başına bir defalık kayıt kullanılır.
+- FNV tabanlı pozitif 31-bit ID + persisted collision registry; owner/occurrence anahtarları. Registry/config secure store'da, OS jobs plugin private storage'dadır. Gizli varsayılan içerik, private visibility, backup kapalı. Bildirim payload'ında yalnız owner/dose UUID'si; açılışta doğrulanmış hesapla eşleşme gerekir.
+- Bildirim izni context içinde istenir; app start otomatik prompt yapmaz. SCHEDULE_EXACT_ALARM yalnız açık kullanıcı isteğiyle; USE_EXACT_ALARM veya full-screen izinleri yoktur. Yaklaşık fallback görünürdür. Pil muafiyeti otomatik istenmez.
+- Serialized reconciliation + generation/session reset guard. Mutasyondan sonra bilinen eski kayıtlar önce iptal edilir; ağ hatası eski arşiv/doz alarmını korumaz. Secure-store identity OS job'dan önce saklanır. Logout network-fetch kuyruğunun arkasına girmez; auth cleanup deadlock'u ve geç gelen cache yazısı önlenir.
+- İstemci en yakın 200 adayı planlar, sınır görünürdür. Ufuk app açılış/resume/mutation ile yenilenir; background server polling yoktur. Kesinti sırasında tamamlanamayan kurulum app açıldığında uzlaştırılır.
+- V7 snoozed_until; server reminder candidates ve idempotent snooze API. Snooze klinik teyit veya stok hareketi değildir; eski action geçmişi değiştirilmez.
+
+Referanslar: [Plugin kurulum ve Android gereksinimleri](https://pub.dev/packages/flutter_local_notifications), [Android exact alarm izinleri](https://developer.android.com/about/versions/14/changes/schedule-exact-alarms), [Android alarm davranışı](https://developer.android.com/develop/background-work/services/alarms).

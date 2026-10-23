@@ -132,6 +132,44 @@ public class DoseStore {
         .findFirst();
   }
 
+  public DoseDtos.Page reminders(
+      UUID owner, LocalDate today, ZoneId zone, int page, int size, Instant now) {
+    String where =
+        " from dose_occurrences d join schedule_versions s on s.id=d.schedule_version_id join medications m on m.id=s.medication_id where m.user_id=? and m.archived_at is null and d.status in ('PENDING','DUE','MISSED') and ((d.snoozed_until>? ) or (d.snoozed_until is null and d.due_at_utc>? and d.due_at_utc<?))";
+    var limit = Timestamp.from(today.plusDays(14).atStartOfDay(zone).toInstant());
+    long count =
+        jdbc.queryForObject(
+            "select count(*)" + where,
+            Long.class,
+            owner,
+            Timestamp.from(now),
+            Timestamp.from(now),
+            limit);
+    var rows =
+        jdbc.query(
+            "select d.*,s.medication_id,s.version as schedule_version_number,s.quantity_per_dose,s.timezone, (select a.id from dose_actions a where a.occurrence_id=d.id order by a.occurrence_version desc limit 1) as last_action_id, (select a.recorded_at from dose_actions a where a.occurrence_id=d.id order by a.occurrence_version desc limit 1) as action_recorded_at"
+                + where
+                + " order by coalesce(d.snoozed_until,d.due_at_utc),d.id limit ? offset ?",
+            (rs, n) -> view(rs, now),
+            owner,
+            Timestamp.from(now),
+            Timestamp.from(now),
+            limit,
+            size,
+            (long) page * size);
+    return new DoseDtos.Page(
+        rows, today, zone.getId(), page, size, count, (int) ((count + size - 1) / size));
+  }
+
+  public boolean snooze(UUID id, long version, Instant until) {
+    return jdbc.update(
+            "update dose_occurrences set snoozed_until=?,version=version+1 where id=? and version=?",
+            Timestamp.from(until),
+            id,
+            version)
+        == 1;
+  }
+
   private DoseDtos.View view(java.sql.ResultSet rs, Instant now) throws java.sql.SQLException {
     Instant due = rs.getTimestamp("due_at_utc").toInstant();
     String status = rs.getString("status");
@@ -155,6 +193,9 @@ public class DoseStore {
         rs.getTimestamp("action_recorded_at") == null
             ? null
             : rs.getTimestamp("action_recorded_at").toInstant(),
-        rs.getTimestamp("missed_at") == null ? null : rs.getTimestamp("missed_at").toInstant());
+        rs.getTimestamp("missed_at") == null ? null : rs.getTimestamp("missed_at").toInstant(),
+        rs.getTimestamp("snoozed_until") == null
+            ? null
+            : rs.getTimestamp("snoozed_until").toInstant());
   }
 }

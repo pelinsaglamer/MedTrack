@@ -24,9 +24,10 @@ class Dose {
       version = j['version'] as int,
       lastActionId = j['lastActionId'] as String?,
       recordedAt = j['recordedAt'] as String?,
-      missedAt = j['missedAt'] as String?;
+      missedAt = j['missedAt'] as String?,
+      snoozedUntil = j['snoozedUntil'] as String?;
   final String id, medicationId, name, unit, quantity, date, time, zone, status;
-  final String? lastActionId, recordedAt, missedAt;
+  final String? lastActionId, recordedAt, missedAt, snoozedUntil;
   final DateTime due;
   final int version;
   bool get canConfirm => status == 'DUE' || status == 'MISSED';

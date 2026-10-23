@@ -15,6 +15,8 @@ import 'features/online/inventory_screen.dart';
 import 'features/online/summary_screen.dart';
 import 'features/medications/medication_list_screen.dart';
 import 'shared/design.dart';
+import 'features/notifications/notification_host.dart';
+import 'features/notifications/notification_settings_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<int>(0);
@@ -39,6 +41,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       return state.uri.path == target ? null : target;
     },
     routes: [
+      GoRoute(
+        path: '/notifications',
+        builder: (_, _) => const NotificationSettingsScreen(),
+      ),
       GoRoute(
         path: '/today',
         builder: (_, _) => const DashboardScreen(),
@@ -102,15 +108,18 @@ final routerProvider = Provider<GoRouter>((ref) {
 class MedTrackApp extends ConsumerWidget {
   const MedTrackApp({super.key});
   @override
-  Widget build(BuildContext context, WidgetRef ref) => MaterialApp.router(
-    title: 'MedTrack',
-    debugShowCheckedModeBanner: false,
-    locale: const Locale('tr'),
-    supportedLocales: const [Locale('tr')],
-    localizationsDelegates: GlobalMaterialLocalizations.delegates,
-    theme: MedTrackDesign.theme(Brightness.light),
-    darkTheme: MedTrackDesign.theme(Brightness.dark),
-    routerConfig: ref.watch(routerProvider),
+  Widget build(BuildContext context, WidgetRef ref) => NotificationHost(
+    onOpen: (id) => ref.read(routerProvider).go('/today/doses/$id'),
+    child: MaterialApp.router(
+      title: 'MedTrack',
+      debugShowCheckedModeBanner: false,
+      locale: const Locale('tr'),
+      supportedLocales: const [Locale('tr')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
+      theme: MedTrackDesign.theme(Brightness.light),
+      darkTheme: MedTrackDesign.theme(Brightness.dark),
+      routerConfig: ref.watch(routerProvider),
+    ),
   );
 }
 

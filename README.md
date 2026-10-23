@@ -126,4 +126,11 @@ Stok/plan geçmişi oluşmuş bir ilaçta birim değiştirilemez. Farklı birim 
 
 ## Flutter istemcisi — Phase 6–7
 
-Android kayıt/giriş, güvenli oturum, ilaç oluşturma/düzenleme/arşivleme, plan sürümleri, günlük/geçmiş doz, Aldım/Atladım/UNDO, stok ve haftalık özet hazır. Kurulum ve emülatör/USB cihaz komutları [mobil README](mobile/README.md) içinde. Sonuç ve sınırlamalar: [Phase 7 raporu](docs/phase-7-report.md). Yerel bildirimler Phase 8'de devam edecek.
+Android kayıt/giriş, güvenli oturum, ilaç oluşturma/düzenleme/arşivleme, plan sürümleri, günlük/geçmiş doz, Aldım/Atladım/UNDO, stok ve haftalık özet hazır. Kurulum ve emülatör/USB cihaz komutları [mobil README](mobile/README.md) içinde. Sonuç ve sınırlamalar: [Phase 7 raporu](docs/phase-7-report.md). Yerel bildirimlerin emülatör sonuçları aşağıdaki Phase 8 bölümündedir.
+
+
+## Yerel hatırlatmalar — Phase 8
+
+İlaçlarım ekranındaki zil simgesinden bildirim izni ve gizlilik ayarları yönetilir. Varsayılan içerik ilaç adını gizler. Doz detayında “Hatırlatmayı ertele” yalnız sonraki hatırlatmayı değiştirir; Aldım/Atladım kaydı veya stok hareketi oluşturmaz. Plan değişikliği, arşiv, teyit ve çıkışta cihaz planı uzlaştırılır. Bildirim teslimi garanti edilmez.
+
+[Phase 8 raporu](docs/phase-8-report.md) emülatör kabul sonuçlarını ve sınırlamaları açıklar. Gerçek Android cihaz testleri kullanıcı isteğiyle ertelendi; fiziksel cihaz/iOS kabulü tamamlandı sayılmaz. Çalıştırma/test komutları [mobil README](mobile/README.md) içinde.

@@ -28,7 +28,9 @@ class _MedicationListScreenState extends ConsumerState<MedicationListScreen> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            e.code == 'SECURE_STORAGE' ? e.message : 'Cihazdaki oturum kapatıldı. Sunucu çıkışı doğrulanamadı; sunucudaki oturum süresi dolana kadar açık kalabilir.',
+            (e.code == 'SECURE_STORAGE' || e.code == 'NOTIFICATION_CLEANUP')
+                ? e.message
+                : 'Cihazdaki oturum kapatıldı. Sunucu çıkışı doğrulanamadı; sunucudaki oturum süresi dolana kadar açık kalabilir.',
           ),
         ),
       );
@@ -50,6 +52,11 @@ class _MedicationListScreenState extends ConsumerState<MedicationListScreen> {
       appBar: AppBar(
         title: const Text('İlaçlarım'),
         actions: [
+          IconButton(
+            tooltip: 'Hatırlatma ayarları',
+            onPressed: () => context.push('/notifications'),
+            icon: const Icon(Icons.notifications_outlined),
+          ),
           IconButton(
             tooltip: 'Çıkış yap',
             onPressed: _signingOut ? null : _logout,

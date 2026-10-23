@@ -1,4 +1,4 @@
-# API sözleşmesi — Phase 1–7
+# API sözleşmesi — Phase 1–8
 
 Kaynak: SRS §8. Domain API tabanı `/api/v1`; auth/account ve ilaç endpointleri aşağıdadır; schedule ve günlük doz endpointleri aşağıdadır; doz işlemleri, inventory ve haftalık özet aşağıdadır.
 
@@ -191,3 +191,18 @@ Current status alanları ayrışıktır ve toplamları scheduledDoses'a eşittir
 - `GET /api/v1/medications/{id}/schedules?page=0&size=20`: `{content:[ScheduleView],page,size,totalElements,totalPages}`; version DESC. Parent medication owner kontrol edilir; arşivli ilacın geçmişi okunabilir. Page 0–10000, size 1–100; validation 422. Yabancı/bulunamayan parent 404.
 
 Mobil istemci decimal miktarları string olarak taşır. Yetkili POST, access refresh sırasında gövde ve Idempotency-Key'i aynen korur. Doz/stock belirsiz retry aynı işlem kimliğidir; medication/schedule create için otomatik tekrar yoktur.
+
+
+## Phase 8 — yerel hatırlatma ve erteleme
+
+`GET /api/v1/doses/reminders?page=0&size=100`: Daily Page biçimi; date/timezone hesap gününü ve bölgesini gösterir. Normal gelecek unconfirmed slotlar 14 günlük üretim ufkuyla sınırlıdır; geçmiş dozun ileri tarihli snooze'u da dönebilir. Sıralama etkin hatırlatma zamanı (snoozedUntil varsa o, aksi halde dueAtUtc), sonra UUID. Arşivli ilaç/TAKEN/SKIPPED yoktur. Page 0–10000, size 1–100. Sahiplik principal'dan alınır.
+
+`POST /api/v1/doses/{id}/snoozes`, `Idempotency-Key: UUID`, 201:
+
+```json
+{"clientOperationId":"UUID","snoozedUntil":"2026-10-23T18:15:00Z","expectedVersion":0}
+```
+
+Yanıt `{occurrenceId,clientOperationId,snoozedUntil,occurrenceVersion}`. snoozedUntil gelecekte olmalı; aynı anda belirli bir doz için tek güncel erteleme saklanır. Yalnız zamanı gelmiş teyitsiz doz kabul edilir; future/finalized/archived veya stale version 409 DOSE_STATE_CONFLICT. Owner dışı/bulunamayan 404; eksik auth 401; alan hatası 422. Header/body UUID eşleşir; global replay/conflict kuralları diğer mutation'larla aynıdır.
+
+Snooze reminder metadata'sını ve occurrence revision'ını değiştirir; dueAtUtc, dose_action ve inventory_ledger yazılmaz. Zamandan türetilen MISSED kuralı bağımsızdır. TAKEN/SKIPPED/UNDO snoozedUntil'i temizler; UNDO eski ertelemeyi geri getirmez. Exact replay ilk yanıtı verir ve yeni erteleme uygulamaz. Güncel durum için dose GET kullanılır.

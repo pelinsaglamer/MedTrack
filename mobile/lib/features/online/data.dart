@@ -1,4 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../notifications/notification_controller.dart';
+
 import 'package:uuid/uuid.dart';
 
 import '../../core/api_client.dart';
@@ -150,7 +155,16 @@ class Operations extends Notifier<Map<String, PendingOperation>> {
   }
 }
 
-void refreshOnline(WidgetRef ref) {
+void refreshOnline(
+  WidgetRef ref, {
+  String? medicationChanged,
+  String? doseChanged,
+}) {
+  unawaited(
+    ref
+        .read(notificationControllerProvider.notifier)
+        .sync(medicationChanged: medicationChanged, doseChanged: doseChanged),
+  );
   ref.invalidate(medicationsProvider);
   ref.invalidate(medicationProvider);
   ref.invalidate(dailyProvider);

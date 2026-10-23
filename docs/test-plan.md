@@ -100,3 +100,10 @@ Mobil offline queue, real-device notifications ve account deletion API testi son
 Backend total 108: dose detail owner/404/401 ve türetilen state, schedule history owner/pagination. Mobil unit/widget: exact payload/key replay after network failure, double tap/in-flight, definitive conflict, 5xx pending retention, logout scope clear, JWT refresh preserving POST, decimal validation, UTC date navigation, create ambiguity guard, unknown inventory/forecast, explicit dose confirmation/cancel and stock correction confirmation.
 
 `flutter test integration_test -d emulator-5554`: Phase 6 auth regression ve Phase 7 gerçek backend online akışı. Kurgusal kullanıcıyla UI üzerinden ilaç/plan, TAKEN/UNDO/SKIPPED, balance 10 → 8.5 → 10 → 10, restock 15 ve correction 17.5, unit lock, name edit, archive ve retained history kontrolü. CI native emulator testini otomatik çalıştırmaz. Son kanıt [Phase 7 raporunda](phase-7-report.md).
+
+
+## Phase 8 — bildirimler
+
+113 backend testi: snooze owner/revision/UUID replay, immutable stock/action invariants, finalized/future/archive rejection, reminder candidates ve V7 migration. 51 mobil test: denied/revoked/exact fallback, IDs/collisions, UTC/DST overlap, content privacy, replacement/cancellation, logout/network/late-storage races ve auth cleanup retry.
+
+Android emülatör matrisi ve gözlemler: [Phase 8 raporu](phase-8-report.md). `mobile/tool/notification_emulator_test.py --mode denied|inexact|granted|tap|persistTap` build/install/izin senaryosu ve gerektiğinde OS bildirimi tap sürücüsünü çalıştırır. Native testin iz bırakması gereken reboot/upgrade senaryolarında `--no-uninstall` zorunludur. Normal integration_test çalıştırması uygulamayı kaldırabilir veya force-stop yapabilir; bunlar normal background reboot ile aynı gözlem değildir. Gerçek cihaz testi kullanıcı isteğiyle bekliyor.

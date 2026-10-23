@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api_client.dart';
+import '../../core/session_cleanup.dart';
 import '../../core/providers.dart';
 import '../../core/token_store.dart';
 import 'auth_api.dart';
@@ -143,6 +144,12 @@ class SessionController extends Notifier<SessionState> {
     _clearRequired = true;
     _epoch++;
     state = SessionState(SessionStatus.loading, epoch: _epoch);
+    Object? cleanupError;
+    try {
+      await ref.read(sessionCleanupProvider).run();
+    } catch (e) {
+      cleanupError = e;
+    }
     try {
       await _store.clear();
       _clearRequired = false;
@@ -153,6 +160,15 @@ class SessionController extends Notifier<SessionState> {
         epoch: _epoch,
       );
       throw const ApiFailure('SECURE_STORAGE');
+    }
+    if (cleanupError != null) {
+      _clearRequired = true;
+      state = SessionState(
+        SessionStatus.unavailable,
+        error: const ApiFailure('NOTIFICATION_CLEANUP'),
+        epoch: _epoch,
+      );
+      throw const ApiFailure('NOTIFICATION_CLEANUP');
     }
     state = SessionState(SessionStatus.signedOut, epoch: _epoch);
   }

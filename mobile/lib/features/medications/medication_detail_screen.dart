@@ -39,7 +39,7 @@ class _DetailState extends ConsumerState<MedicationDetailScreen> {
             body: {'archived': true},
           );
       if (mounted) {
-        refreshOnline(ref);
+        refreshOnline(ref, medicationChanged: widget.id);
         context.go('/medications');
       }
     } catch (e) {

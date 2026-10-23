@@ -75,6 +75,122 @@ class DoseActionIntegrationTests {
         "NOT_FOUND");
   }
 
+  private Map<String, Object> snoozeBody(UUID key) {
+    return new HashMap<>(Map.of("clientOperationId", key, "snoozedUntil", "2026-10-22T13:15:00Z"));
+  }
+
+  private JsonNode snooze(UUID id, UUID key) throws Exception {
+    return node(call("POST", "/api/v1/doses/" + id + "/snoozes", snoozeBody(key), key, token), 201);
+  }
+
+  @Test
+  void snoozeOnlyChangesReminderAndReplaysWithoutAnotherRevision() throws Exception {
+    var original = node(call("GET", "/api/v1/doses/" + due, null, null, token), 200);
+    var initial = stock(med);
+    UUID key = UUID.randomUUID();
+    var first = snooze(due, key);
+    assertEquals(first, snooze(due, key));
+    var after = node(call("GET", "/api/v1/doses/" + due, null, null, token), 200);
+    assertEquals(original.get("status"), after.get("status"));
+    assertEquals(original.get("dueAtUtc"), after.get("dueAtUtc"));
+    assertEquals(original.get("version").asLong() + 1, after.get("version").asLong());
+    assertEquals("2026-10-22T13:15:00Z", after.get("snoozedUntil").asText());
+    assertEquals(initial.get("balance"), stock(med).get("balance"));
+    assertEquals(0, actions(due));
+  }
+
+  @Test
+  void reminderCandidatesIncludeSnoozedPastDoseAndExcludeConfirmed() throws Exception {
+    snooze(due, UUID.randomUUID());
+    var candidates = node(call("GET", "/api/v1/doses/reminders?size=100", null, null, token), 200);
+    assertTrue(
+        candidates
+            .get("content")
+            .valueStream()
+            .anyMatch(n -> n.get("id").asText().equals(due.toString())));
+    node(action(due, "TAKEN", UUID.randomUUID()), 201);
+    var detail = node(call("GET", "/api/v1/doses/" + due, null, null, token), 200);
+    assertTrue(detail.get("snoozedUntil").isNull());
+    candidates = node(call("GET", "/api/v1/doses/reminders?size=100", null, null, token), 200);
+    assertFalse(
+        candidates
+            .get("content")
+            .valueStream()
+            .anyMatch(n -> n.get("id").asText().equals(due.toString())));
+  }
+
+  @Test
+  void snoozeRejectsFutureOrFinalizedDoseAndPastReminderTime() throws Exception {
+    UUID key = UUID.randomUUID();
+    error(
+        call("POST", "/api/v1/doses/" + future + "/snoozes", snoozeBody(key), key, token),
+        409,
+        "DOSE_STATE_CONFLICT");
+    var body = snoozeBody(key);
+    body.put("snoozedUntil", "2026-10-21T00:00:00Z");
+    error(
+        call("POST", "/api/v1/doses/" + due + "/snoozes", body, key, token),
+        422,
+        "VALIDATION_ERROR");
+    node(action(due, "SKIPPED", UUID.randomUUID()), 201);
+    error(
+        call("POST", "/api/v1/doses/" + due + "/snoozes", snoozeBody(key), key, token),
+        409,
+        "DOSE_STATE_CONFLICT");
+  }
+
+  @Test
+  void snoozeOwnerValidationAndGlobalIdempotencyConflicts() throws Exception {
+    UUID key = UUID.randomUUID();
+    snooze(due, key);
+    error(action(due, "TAKEN", key), 409, "IDEMPOTENCY_KEY_REUSED");
+    var stale = snoozeBody(UUID.randomUUID());
+    stale.put("expectedVersion", 0);
+    error(
+        call(
+            "POST",
+            "/api/v1/doses/" + due + "/snoozes",
+            stale,
+            (UUID) stale.get("clientOperationId"),
+            token),
+        409,
+        "DOSE_STATE_CONFLICT");
+    String other = login();
+    UUID next = UUID.randomUUID();
+    error(
+        call("POST", "/api/v1/doses/" + due + "/snoozes", snoozeBody(next), next, other),
+        404,
+        "NOT_FOUND");
+    error(call("GET", "/api/v1/doses/reminders", null, null, null), 401, "UNAUTHORIZED");
+    assertEquals(
+        422, call("GET", "/api/v1/doses/reminders?size=101", null, null, token).statusCode());
+  }
+
+  @Test
+  void undoDoesNotResurrectOldSnoozeAndArchiveRemovesCandidates() throws Exception {
+    snooze(due, UUID.randomUUID());
+    var taken = node(action(due, "TAKEN", UUID.randomUUID()), 201);
+    UUID key = UUID.randomUUID();
+    var undo = body("UNDO", key);
+    undo.put("undoActionId", taken.get("actionId").asText());
+    node(call("POST", "/api/v1/doses/" + due + "/actions", undo, key, token), 201);
+    assertTrue(
+        node(call("GET", "/api/v1/doses/" + due, null, null, token), 200)
+            .get("snoozedUntil")
+            .isNull());
+    node(call("PATCH", "/api/v1/medications/" + med, Map.of("archived", true), null, token), 200);
+    UUID snoozeKey = UUID.randomUUID();
+    error(
+        call("POST", "/api/v1/doses/" + due + "/snoozes", snoozeBody(snoozeKey), snoozeKey, token),
+        409,
+        "DOSE_STATE_CONFLICT");
+    assertEquals(
+        0,
+        node(call("GET", "/api/v1/doses/reminders", null, null, token), 200)
+            .get("totalElements")
+            .asInt());
+  }
+
   @BeforeEach
   void setup() throws Exception {
     token = login();

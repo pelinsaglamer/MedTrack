@@ -7,6 +7,7 @@ import 'package:http/testing.dart';
 import 'package:medtrack/core/api_client.dart';
 import 'package:medtrack/core/providers.dart';
 import 'package:medtrack/core/token_store.dart';
+import 'package:medtrack/core/session_cleanup.dart';
 import 'package:medtrack/features/auth/session.dart';
 
 class MemoryStore implements TokenStore {
@@ -221,4 +222,23 @@ void main() {
       expect(requests[1].headers['Idempotency-Key'], 'fixture-operation');
     },
   );
+  test('failed notification cleanup clears tokens and blocks restoration until retry', () async {
+    final store = MemoryStore()..tokens = const Tokens('fictional', 'refresh');
+    final c = await setup(store, (_) async => jsonResponse({}));
+    addTearDown(c.dispose);
+    Future<void> failure() async {
+      throw StateError('OS unavailable');
+    }
+
+    c.read(sessionCleanupProvider).add(failure);
+    await expectLater(
+      c.read(sessionProvider.notifier).logout(),
+      throwsA(isA<ApiFailure>()),
+    );
+    expect(store.tokens, isNull);
+    expect(c.read(sessionProvider).status, SessionStatus.unavailable);
+    c.read(sessionCleanupProvider).remove(failure);
+    await c.read(sessionProvider.notifier).restore();
+    expect(c.read(sessionProvider).status, SessionStatus.signedOut);
+  });
 }

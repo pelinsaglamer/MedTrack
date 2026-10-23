@@ -91,7 +91,7 @@ public class DoseActionStore {
 
   public boolean transition(Occurrence occurrence, String status) {
     return jdbc.update(
-            "update dose_occurrences set status=?,version=version+1 where id=? and version=?",
+            "update dose_occurrences set status=?,snoozed_until=null,version=version+1 where id=? and version=?",
             status,
             occurrence.id(),
             occurrence.version())

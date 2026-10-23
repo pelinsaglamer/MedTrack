@@ -52,7 +52,7 @@ class _MedicationFormState extends ConsumerState<MedicationFormScreen> {
             body: body,
           );
       if (!mounted) return;
-      refreshOnline(ref);
+      refreshOnline(ref, medicationChanged: result['id'] as String);
       context.go('/medications/${result['id']}');
     } catch (e) {
       if (mounted) {

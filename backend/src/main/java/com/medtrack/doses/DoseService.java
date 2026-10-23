@@ -97,6 +97,15 @@ public class DoseService {
   }
 
   @Transactional
+  public DoseDtos.Page reminders(int page, int size) {
+    list(null, 0, 1);
+    var owner = current.id();
+    var zone = ZoneId.of(users.findById(owner).orElseThrow().timezone());
+    var now = clock.instant();
+    return doses.reminders(owner, now.atZone(zone).toLocalDate(), zone, page, size, now);
+  }
+
+  @Transactional
   public DoseDtos.WeeklySummary summary(LocalDate requested) {
     var owner = current.id();
     ZoneId zone = ZoneId.of(users.findById(owner).orElseThrow().timezone());
