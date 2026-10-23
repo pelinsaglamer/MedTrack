@@ -54,6 +54,11 @@ class InventoryMigrationTests {
       var migration = Flyway.configure().dataSource(source).load();
       migration.migrate();
       migration.validate();
+      assertNull(
+          jdbc.queryForObject("select strength from medications where id=?", String.class, known));
+      assertNull(
+          jdbc.queryForObject(
+              "select strength from medications where id=?", String.class, unknown));
       assertEquals(
           0,
           new BigDecimal("30")

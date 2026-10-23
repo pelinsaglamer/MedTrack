@@ -44,6 +44,7 @@ public class MedicationService {
             clean(input.unit(), "unit"),
             input.initialStock(),
             clock.instant());
+    medication.changeStrength(optionalLabel(input.strength()));
     medication = medications.saveAndFlush(medication);
     inventory.initialize(medication);
     return MedicationDtos.View.from(medication);
@@ -74,8 +75,10 @@ public class MedicationService {
   @Transactional
   public MedicationDtos.View patch(UUID id, MedicationDtos.Patch input) {
     var medication = medications.findOwnedForUpdate(id, current.id()).orElseThrow(this::notFound);
-    if (input.name() == null && input.unit() == null && input.archived() == null)
-      throw invalid("request", "At least one field is required");
+    if (input.name() == null
+        && input.unit() == null
+        && input.archived() == null
+        && input.strength() == null) throw invalid("request", "At least one field is required");
     if (Boolean.FALSE.equals(input.archived()))
       throw invalid("archived", "Only archiving is supported");
     if (input.name() != null) medication.rename(clean(input.name(), "name"));
@@ -91,11 +94,16 @@ public class MedicationService {
             "Unit cannot change after stock or schedule history; create a separate medication");
       medication.changeUnit(unit);
     }
+    if (input.strength() != null) medication.changeStrength(optionalLabel(input.strength()));
     if (Boolean.TRUE.equals(input.archived())) {
       medication.archive(clock.instant());
       schedules.stopAt(id, medication.archivedAt(), medication.archivedAt());
     }
     return MedicationDtos.View.from(medications.saveAndFlush(medication));
+  }
+
+  private String optionalLabel(String value) {
+    return value == null || value.isBlank() ? null : value.strip();
   }
 
   private String clean(String value, String field) {

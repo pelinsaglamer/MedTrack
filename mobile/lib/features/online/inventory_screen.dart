@@ -187,8 +187,12 @@ class _InventoryState extends ConsumerState<InventoryScreen> {
                         ),
                         decoration: InputDecoration(
                           labelText: _reason == 'RESTOCK'
-                              ? 'Eklenecek miktar (${v.unit})'
-                              : 'Fiziksel toplam stok (${v.unit})',
+                              ? 'Yeni eklediğin miktar (${v.unit})'
+                              : 'Şu anda elindeki toplam (${v.unit})',
+                          helperText: _reason == 'RESTOCK'
+                              ? 'Yalnız yeni aldığın miktarı yaz; elindekilerle toplanacak.'
+                              : 'Saydığın toplamı yaz; mevcut miktarın yerine bu değer kullanılacak.',
+                          helperMaxLines: 3,
                           errorText: fieldError(_error, 'quantity'),
                         ),
                         validator: (s) =>

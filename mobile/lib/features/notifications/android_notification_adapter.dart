@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -23,7 +25,7 @@ class AndroidNotificationAdapter implements NotificationAdapter {
         AndroidFlutterLocalNotificationsPlugin
       >()!;
   @override
-  bool get supported => Platform.isAndroid;
+  bool get supported => !kIsWeb && Platform.isAndroid;
   @override
   Future<void> initialize(void Function(String) onOpen) async {
     if (!supported) return;

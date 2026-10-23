@@ -134,3 +134,7 @@ Android kayıt/giriş, güvenli oturum, ilaç oluşturma/düzenleme/arşivleme, 
 İlaçlarım ekranındaki zil simgesinden bildirim izni ve gizlilik ayarları yönetilir. Varsayılan içerik ilaç adını gizler. Doz detayında “Hatırlatmayı ertele” yalnız sonraki hatırlatmayı değiştirir; Aldım/Atladım kaydı veya stok hareketi oluşturmaz. Plan değişikliği, arşiv, teyit ve çıkışta cihaz planı uzlaştırılır. Bildirim teslimi garanti edilmez.
 
 [Phase 8 raporu](docs/phase-8-report.md) emülatör kabul sonuçlarını ve sınırlamaları açıklar. Gerçek Android cihaz testleri kullanıcı isteğiyle ertelendi; fiziksel cihaz/iOS kabulü tamamlandı sayılmaz. Çalıştırma/test komutları [mobil README](mobile/README.md) içinde.
+
+## İlaç gücü ve elde kalan miktar
+
+İlaç gücü (`20 mg/tablet` gibi kutu bilgisi), stok biriminden (`tablet`) ve eldeki miktardan (`30`) ayrıdır. İsteğe bağlı güç bilgisi ekleme/düzenleme, liste ve detay ekranında bulunur; hesaplamalarda kullanılmaz. [Kullanıcı onaylı kapsam](docs/SRS-addendum-medication-strength.md). Yerel web önizlemesi için [mobil README](mobile/README.md).

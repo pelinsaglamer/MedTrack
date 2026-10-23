@@ -32,8 +32,9 @@ http.Response jsonResponse(Object data, [int status = 200]) => http.Response(
 Future<void> open(
   WidgetTester tester,
   String path,
-  Future<http.Response> Function(http.Request) handler,
-) async {
+  Future<http.Response> Function(http.Request) handler, {
+  Map<String, dynamic>? medication,
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -51,7 +52,9 @@ Future<void> open(
                 return r.method == 'GET' ? jsonResponse(page([])) : handler(r);
               }
               if (r.url.path == '/api/v1/medications/fixture') {
-                return jsonResponse(med);
+                return r.method == 'GET'
+                    ? jsonResponse(medication ?? med)
+                    : handler(r);
               }
               return handler(r);
             }),
@@ -69,7 +72,10 @@ Future<void> open(
 }
 
 Future<void> tapText(WidgetTester tester, String text) async {
+  FocusManager.instance.primaryFocus?.unfocus();
+  await tester.pumpAndSettle();
   await tester.ensureVisible(find.text(text).last);
+  await tester.pumpAndSettle();
   await tester.tap(find.text(text).last);
   await tester.pumpAndSettle();
 }
@@ -79,28 +85,82 @@ void main() {
     'medication form validates decimal input and blocks duplicate creation after timeout',
     (tester) async {
       var calls = 0;
+      Map<String, dynamic>? submitted;
       await open(tester, '/medications/new', (r) async {
         calls++;
+        submitted = jsonDecode(r.body) as Map<String, dynamic>;
         throw http.ClientException('uncertain');
       });
       await tapText(tester, 'Kaydet');
       expect(calls, 0);
       await tester.enterText(find.byType(TextFormField).at(0), 'Example');
-      await tester.enterText(find.byType(TextFormField).at(1), 'tablet');
-      await tester.enterText(find.byType(TextFormField).at(2), '1.1234567');
+      await tester.enterText(find.byType(TextFormField).at(1), '20 mg/tablet');
+      await tester.enterText(find.byType(TextFormField).at(2), 'tablet');
+      await tester.enterText(find.byType(TextFormField).at(3), '1.1234567');
       await tapText(tester, 'Kaydet');
       expect(calls, 0);
-      await tester.enterText(find.byType(TextFormField).at(2), '1,5');
+      await tester.enterText(find.byType(TextFormField).at(3), '1,5');
       await tapText(tester, 'Kaydet');
       expect(calls, 1);
+      expect(submitted!['strength'], '20 mg/tablet');
+      expect(submitted!['unit'], 'tablet');
+      expect(submitted!['initialStock'], '1.5');
       expect(
         find.textContaining('Kayıt sunucuya ulaşmış olabilir'),
         findsOneWidget,
       );
+      await tester.scrollUntilVisible(
+        find.text('Kaydet'),
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
       expect(
         tester.widget<FilledButton>(find.byType(FilledButton).last).onPressed,
         isNull,
       );
+    },
+  );
+  testWidgets(
+    'existing strength loads and can be cleared while stock unit stays locked',
+    (tester) async {
+      Map<String, dynamic>? submitted;
+      final existing = {
+        ...med,
+        'strength': '20 mg/tablet',
+        'initialStock': '30',
+      };
+      await open(tester, '/medications/fixture/edit', (r) async {
+        if (r.method == 'PATCH') {
+          submitted = jsonDecode(r.body) as Map<String, dynamic>;
+          return jsonResponse({...existing, 'strength': null});
+        }
+        if (r.url.path.endsWith('/inventory/fixture')) {
+          return jsonResponse({
+            'unit': 'tablet',
+            'balance': {'known': true, 'quantity': '30', 'warnings': []},
+            'projection': {'status': 'UNKNOWN', 'reason': 'NO_ACTIVE_SCHEDULE'},
+            'movements': page([]),
+          });
+        }
+        return jsonResponse(page([]));
+      }, medication: existing);
+      expect(
+        tester
+            .widget<TextFormField>(find.byType(TextFormField).at(1))
+            .controller!
+            .text,
+        '20 mg/tablet',
+      );
+      expect(
+        tester.widget<TextFormField>(find.byType(TextFormField).at(2)).enabled,
+        isFalse,
+      );
+      await tester.enterText(find.byType(TextFormField).at(1), '');
+      await tapText(tester, 'Kaydet');
+      expect(submitted!['strength'], '');
+      expect(submitted!['unit'], 'tablet');
+      expect(submitted!.containsKey('initialStock'), isFalse);
     },
   );
   testWidgets(

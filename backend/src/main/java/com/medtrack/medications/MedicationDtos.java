@@ -24,7 +24,13 @@ public final class MedicationDtos {
               type = "string",
               example = "30",
               description = "Opening amount, null means unknown; not current inventory")
-          BigDecimal initialStock) {
+          BigDecimal initialStock,
+      @Size(max = 100)
+          @Schema(
+              example = "20 mg/tablet",
+              description =
+                  "Optional package strength label; never used for stock or dose conversion")
+          String strength) {
     @JsonAnySetter
     public void unsupported(String key, Object value) {
       rejectUnknown();
@@ -36,7 +42,11 @@ public final class MedicationDtos {
     }
   }
 
-  public record Patch(@Size(max = 200) String name, @Size(max = 40) String unit, Boolean archived) {
+  public record Patch(
+      @Size(max = 200) String name,
+      @Size(max = 40) String unit,
+      Boolean archived,
+      @Size(max = 100) String strength) {
     @JsonAnySetter
     public void unsupported(String key, Object value) {
       rejectUnknown();
@@ -52,6 +62,7 @@ public final class MedicationDtos {
       UUID id,
       String name,
       String unit,
+      String strength,
       @Schema(
               type = "string",
               example = "30",
@@ -64,6 +75,7 @@ public final class MedicationDtos {
           medication.id(),
           medication.name(),
           medication.unit(),
+          medication.strength(),
           medication.initialStock() == null
               ? null
               : medication.initialStock().stripTrailingZeros().toPlainString(),

@@ -206,3 +206,7 @@ Mobil istemci decimal miktarları string olarak taşır. Yetkili POST, access re
 Yanıt `{occurrenceId,clientOperationId,snoozedUntil,occurrenceVersion}`. snoozedUntil gelecekte olmalı; aynı anda belirli bir doz için tek güncel erteleme saklanır. Yalnız zamanı gelmiş teyitsiz doz kabul edilir; future/finalized/archived veya stale version 409 DOSE_STATE_CONFLICT. Owner dışı/bulunamayan 404; eksik auth 401; alan hatası 422. Header/body UUID eşleşir; global replay/conflict kuralları diğer mutation'larla aynıdır.
 
 Snooze reminder metadata'sını ve occurrence revision'ını değiştirir; dueAtUtc, dose_action ve inventory_ledger yazılmaz. Zamandan türetilen MISSED kuralı bağımsızdır. TAKEN/SKIPPED/UNDO snoozedUntil'i temizler; UNDO eski ertelemeyi geri getirmez. Exact replay ilk yanıtı verir ve yeni erteleme uygulamaz. Güncel durum için dose GET kullanılır.
+
+## Onaylı ek — ilaç gücü
+
+İlaç Create/Patch/View için isteğe bağlı `strength` metni eklendi (en fazla 100 karakter, ör. `20 mg/tablet`). Liste yanıtındaki her ilaçta da bulunur. Stok hesabı ve plan miktarı `unit` üzerinden devam eder; strength dönüştürülmez. Create'de eksik/null/boş metin null olarak saklanır. Patch'te eksik/null alanı korur; `"strength":""` temizler. Eski istemciler alan göndermeden çalışır. Ayrıntılar: [onaylı ek](SRS-addendum-medication-strength.md).

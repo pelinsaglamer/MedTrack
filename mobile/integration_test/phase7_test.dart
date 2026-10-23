@@ -71,8 +71,8 @@ void main() {
         find.byType(TextFormField).at(0),
         'Example Phase 7 $suffix',
       );
-      await tester.enterText(find.byType(TextFormField).at(1), 'tablet');
-      await tester.enterText(find.byType(TextFormField).at(2), '10');
+      await tester.enterText(find.byType(TextFormField).at(2), 'tablet');
+      await tester.enterText(find.byType(TextFormField).at(3), '10');
       await tapText(tester, 'Kaydet');
       await waitFor(tester, find.text('Kullanım planı ekle / değiştir'));
       final medications = await api.request(
@@ -165,7 +165,7 @@ void main() {
       await tapText(tester, 'Düzenle');
       await waitFor(tester, find.byType(TextFormField));
       expect(
-        tester.widget<TextFormField>(find.byType(TextFormField).at(1)).enabled,
+        tester.widget<TextFormField>(find.byType(TextFormField).at(2)).enabled,
         isFalse,
       );
       await tester.enterText(

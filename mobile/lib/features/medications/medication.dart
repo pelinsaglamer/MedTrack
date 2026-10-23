@@ -9,6 +9,7 @@ class Medication {
     required this.unit,
     required this.initialStock,
     this.archivedAt,
+    this.strength,
   });
   factory Medication.fromJson(Map<String, dynamic> json) => Medication(
     id: json['id'] as String,
@@ -16,6 +17,7 @@ class Medication {
     unit: json['unit'] as String,
     initialStock: json['initialStock'] as String?,
     archivedAt: json['archivedAt'] as String?,
+    strength: json['strength'] as String?,
   );
   final String id;
   final String name;
@@ -23,6 +25,7 @@ class Medication {
   // Exact decimal text. Initial stock is never presented as the current balance.
   final String? initialStock;
   final String? archivedAt;
+  final String? strength;
 }
 
 class MedicationPage {

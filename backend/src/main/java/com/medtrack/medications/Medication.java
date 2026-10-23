@@ -20,6 +20,9 @@ public class Medication {
   @Column(nullable = false, length = 40)
   private String unit;
 
+  @Column(length = 100)
+  private String strength;
+
   @Column(name = "initial_stock", precision = 19, scale = 6, updatable = false)
   private BigDecimal initialStock;
 
@@ -51,6 +54,14 @@ public class Medication {
 
   public String unit() {
     return unit;
+  }
+
+  public String strength() {
+    return strength;
+  }
+
+  public void changeStrength(String strength) {
+    this.strength = strength;
   }
 
   public BigDecimal initialStock() {

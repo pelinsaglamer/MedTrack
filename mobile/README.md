@@ -106,3 +106,16 @@ adb -s emulator-5554 shell am start -n com.medtrack.medtrack/.MainActivity
 ```
 
 Emülatör gözlemleri ve ertelenen gerçek cihaz matrisi [Phase 8 raporundadır](../docs/phase-8-report.md). iOS bu fazda derlenmedi/test edilmedi.
+
+## Yerel web önizlemesi
+
+Backend açıkken, `mobile` dizininde:
+
+```sh
+flutter build web --debug --dart-define=API_BASE_URL=http://127.0.0.1:7357/api/v1
+python3 tool/web_preview.py
+```
+
+Tarayıcı adresi: http://127.0.0.1:7357. Yerel sunucu `/api/v1` isteklerini `127.0.0.1:8080` backend'ine iletir; backend CORS ayarı değişmez. Bu komutlar yerel debug önizlemesidir. Android cihaz bildirimleri web üzerinde kapalıdır. Tarayıcı oturumu Android oturumundan ayrıdır; kendi hesabınla giriş yapabilirsin. Sunucuyu durdurmak için Ctrl+C kullanılır.
+
+İlaç ekleme/düzenlemede isteğe bağlı **İlaç gücü** kutudaki metni saklar (ör. `20 mg/tablet`). **Stoku neyle sayacaksın?** alanı ise stok ve kullanım miktarının birimidir (ör. `tablet`); **Şu anda elinde ne kadar var?** bu birimle miktarı alır (ör. `30`). Güç bilgisi stok hesabını değiştirmez.

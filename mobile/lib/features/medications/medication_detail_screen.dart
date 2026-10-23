@@ -63,7 +63,8 @@ class _DetailState extends ConsumerState<MedicationDetailScreen> {
           builder: (m) => ListView(
             children: [
               Text(m.name, style: Theme.of(context).textTheme.headlineSmall),
-              Text('Birim: ${m.unit}'),
+              if (m.strength != null) Text('İlaç gücü: ${m.strength}'),
+              Text('Stok ve kullanım miktarının birimi: ${m.unit}'),
               if (m.archivedAt != null) const Text('Arşivlenmiş ilaç'),
               const SizedBox(height: 16),
               AsyncPanel(
@@ -80,7 +81,7 @@ class _DetailState extends ConsumerState<MedicationDetailScreen> {
                     subtitle: Text(
                       v.warnings.contains('STOCK_NEGATIVE')
                           ? 'Stok negatif. Fiziksel miktarı kontrol et.'
-                          : 'Stok defterinden hesaplanır.',
+                          : 'Başlangıç miktarı, eklemeler ve Aldım kayıtlarından hesaplanır.',
                     ),
                     onTap: () =>
                         context.push('/medications/${widget.id}/inventory'),

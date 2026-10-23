@@ -117,7 +117,9 @@ class _MedicationListScreenState extends ConsumerState<MedicationListScreen> {
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Birim: ${medication.unit}'),
+                          if (medication.strength != null)
+                            Text('İlaç gücü: ${medication.strength}'),
+                          Text('Takip birimi: ${medication.unit}'),
                           StockBadge(medication.id),
                         ],
                       ),
@@ -169,7 +171,10 @@ class StockBadge extends ConsumerWidget {
       .when(
         loading: () => const Text('Stok yükleniyor…'),
         error: (_, _) => const Text('Stok yüklenemedi'),
-        data: (v) =>
-            Text(v.known ? 'Stok: ${v.quantity} ${v.unit}' : 'Stok bilinmiyor'),
+        data: (v) => Text(
+          v.known
+              ? 'Elinde kalan: ${v.quantity} ${v.unit}'
+              : 'Elindeki miktar bilinmiyor',
+        ),
       );
 }

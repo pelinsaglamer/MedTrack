@@ -18,6 +18,7 @@ class MedicationFormScreen extends ConsumerStatefulWidget {
 class _MedicationFormState extends ConsumerState<MedicationFormScreen> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController(),
+      _strength = TextEditingController(),
       _unit = TextEditingController(),
       _stock = TextEditingController();
   bool _ready = false, _busy = false, _uncertain = false;
@@ -25,6 +26,7 @@ class _MedicationFormState extends ConsumerState<MedicationFormScreen> {
   @override
   void dispose() {
     _name.dispose();
+    _strength.dispose();
     _unit.dispose();
     _stock.dispose();
     super.dispose();
@@ -40,6 +42,7 @@ class _MedicationFormState extends ConsumerState<MedicationFormScreen> {
       final body = <String, dynamic>{
         'name': _name.text.trim(),
         'unit': _unit.text.trim(),
+        'strength': _strength.text.trim(),
       };
       if (widget.id == null && _stock.text.trim().isNotEmpty) {
         body['initialStock'] = normalizeDecimal(_stock.text);
@@ -96,6 +99,7 @@ class _MedicationFormState extends ConsumerState<MedicationFormScreen> {
       if (!_ready) {
         _name.text = med.value!.name;
         _unit.text = med.value!.unit;
+        _strength.text = med.value!.strength ?? '';
         _ready = true;
       }
     }
@@ -108,76 +112,106 @@ class _MedicationFormState extends ConsumerState<MedicationFormScreen> {
         body: ContentFrame(
           child: Form(
             key: _form,
-            child: ListView(
-              children: [
-                TextFormField(
-                  controller: _name,
-                  enabled: !_busy && !_uncertain,
-                  decoration: InputDecoration(
-                    labelText: 'İlaç adı',
-                    errorText: fieldError(_error, 'name'),
-                  ),
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty || v.trim().length > 200
-                      ? '1–200 karakterlik bir ad girin.'
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _unit,
-                  enabled: !locked && !_busy && !_uncertain,
-                  decoration: InputDecoration(
-                    labelText: 'Birim (tablet, ml vb.)',
-                    errorText: fieldError(_error, 'unit'),
-                  ),
-                  validator: (v) =>
-                      v == null || v.trim().isEmpty || v.trim().length > 40
-                      ? '1–40 karakterlik bir birim girin.'
-                      : null,
-                ),
-                if (locked)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      'Stok veya plan geçmişi olduğu için birim korunur. Farklı birim için yeni ilaç ekle.',
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextFormField(
+                    controller: _name,
+                    enabled: !_busy && !_uncertain,
+                    decoration: InputDecoration(
+                      labelText: 'İlaç adı',
+                      hintText: 'Kutuda yazan ilaç adı',
+                      errorText: fieldError(_error, 'name'),
                     ),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty || v.trim().length > 200
+                        ? '1–200 karakterlik bir ad girin.'
+                        : null,
                   ),
-                if (widget.id == null) ...[
                   const SizedBox(height: 16),
                   TextFormField(
-                    controller: _stock,
+                    controller: _strength,
                     enabled: !_busy && !_uncertain,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
+                    maxLength: 100,
                     decoration: InputDecoration(
-                      labelText: 'Başlangıç stoku (isteğe bağlı)',
-                      helperText: 'Boş: bilinmiyor. 0: bilinen sıfır stok.',
-                      errorText: fieldError(_error, 'initialStock'),
+                      labelText: 'İlaç gücü (isteğe bağlı)',
+                      hintText: 'Örn. 20 mg/tablet veya 5 mg/5 ml',
+                      helperText: 'Kutuda yazdığı gibi gir. Bu bilgi stok miktarını veya kullanım planını değiştirmez.',
+                      helperMaxLines: 3,
+                      errorText: fieldError(_error, 'strength'),
                     ),
-                    validator: (v) => decimalError(v, optional: true),
+                    validator: (v) => (v?.length ?? 0) > 100
+                        ? 'En fazla 100 karakter girin.'
+                        : null,
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'Kaydettikten sonra kullanım saatlerini ve doz miktarını ekleyebilirsin.',
+                  TextFormField(
+                    controller: _unit,
+                    onChanged: (_) => setState(() {}),
+                    enabled: !locked && !_busy && !_uncertain,
+                    decoration: InputDecoration(
+                      labelText: 'Stoku neyle sayacaksın?',
+                      hintText: 'Örn. tablet, kapsül veya ml',
+                      helperText: 'Tablet sayısını takip edeceksen “tablet” yaz. “20 mg/tablet” bilgisi ilaç gücüdür; tablet sayısı değildir.',
+                      helperMaxLines: 4,
+                      errorText: fieldError(_error, 'unit'),
+                    ),
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty || v.trim().length > 40
+                        ? '1–40 karakterlik bir birim girin.'
+                        : null,
+                  ),
+                  if (locked)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'Stok veya plan geçmişi olduğu için birim korunur. Farklı birim için yeni ilaç ekle.',
+                      ),
+                    ),
+                  if (widget.id == null) ...[
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _stock,
+                      enabled: !_busy && !_uncertain,
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      decoration: InputDecoration(
+                        labelText:
+                            'Şu anda elinde ne kadar var? (isteğe bağlı)',
+                        suffixText: _unit.text.trim().isEmpty
+                            ? null
+                            : _unit.text.trim(),
+                        hintText: 'Örn. 30',
+                        helperText: '30 tabletin varsa yukarıya “tablet”, buraya “30” yaz. Miktarı bilmiyorsan boş bırak; hiç kalmadıysa 0 yaz.',
+                        helperMaxLines: 4,
+                        errorText: fieldError(_error, 'initialStock'),
+                      ),
+                      validator: (v) => decimalError(v, optional: true),
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Kaydettikten sonra kullanım saatlerini ve doz miktarını ekleyebilirsin.',
+                    ),
+                  ],
+                  ErrorNotice(_error),
+                  if (_uncertain) ...[
+                    const Text(
+                      'Kayıt sunucuya ulaşmış olabilir. Yeniden oluşturmadan önce ilaç listesini kontrol et.',
+                    ),
+                    TextButton(
+                      onPressed: () => context.go('/medications'),
+                      child: const Text('Listeyi kontrol et'),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: _busy || _uncertain ? null : _save,
+                    child: Text(_busy ? 'Kaydediliyor…' : 'Kaydet'),
                   ),
                 ],
-                ErrorNotice(_error),
-                if (_uncertain) ...[
-                  const Text(
-                    'Kayıt sunucuya ulaşmış olabilir. Yeniden oluşturmadan önce ilaç listesini kontrol et.',
-                  ),
-                  TextButton(
-                    onPressed: () => context.go('/medications'),
-                    child: const Text('Listeyi kontrol et'),
-                  ),
-                ],
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: _busy || _uncertain ? null : _save,
-                  child: Text(_busy ? 'Kaydediliyor…' : 'Kaydet'),
-                ),
-              ],
+              ),
             ),
           ),
         ),

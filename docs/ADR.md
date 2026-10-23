@@ -150,3 +150,7 @@ Kullanıcı fiziksel cihaz testini şimdilik erteleyip emülatörle devam etmeyi
 - V7 snoozed_until; server reminder candidates ve idempotent snooze API. Snooze klinik teyit veya stok hareketi değildir; eski action geçmişi değiştirilmez.
 
 Referanslar: [Plugin kurulum ve Android gereksinimleri](https://pub.dev/packages/flutter_local_notifications), [Android exact alarm izinleri](https://developer.android.com/about/versions/14/changes/schedule-exact-alarms), [Android alarm davranışı](https://developer.android.com/develop/background-work/services/alarms).
+
+## Onaylı ek: ilaç gücünü stok biriminden ayırma
+
+Kullanıcının 23 Ekim 2026 onayıyla `medications.strength` nullable 100 karakter metindir. Kutudaki güç bilgisi aritmetiğe katılmaz; stok `unit` üzerinden hesaplanır. Sıvı/katı örneklerini ve farklı kutu ifadelerini tıbbi yorumlama yapmadan korumak için serbest metin seçildi. Mevcut veriden tahmin veya otomatik birim dönüşümü yapılmaz. [Kapsam ve API semantiği](SRS-addendum-medication-strength.md).

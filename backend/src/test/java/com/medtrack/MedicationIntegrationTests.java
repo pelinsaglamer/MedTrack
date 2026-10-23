@@ -100,6 +100,89 @@ class MedicationIntegrationTests {
   }
 
   @Test
+  void strengthIsSeparateOptionalMetadataAndDoesNotChangeInventory() throws Exception {
+    var item =
+        node(
+            call(
+                "POST",
+                "/api/v1/medications",
+                Map.of(
+                    "name",
+                    "Fictional strength",
+                    "unit",
+                    "tablet",
+                    "initialStock",
+                    "30",
+                    "strength",
+                    " 20 mg/tablet "),
+                access),
+            201);
+    assertEquals("20 mg/tablet", item.get("strength").asText());
+    assertEquals("30", item.get("initialStock").asText());
+    assertEquals("tablet", item.get("unit").asText());
+    assertEquals(
+        "20 mg/tablet", node(call("GET", path(item), null, access), 200).get("strength").asText());
+    assertEquals(
+        "20 mg/tablet",
+        node(call("GET", "/api/v1/medications", null, access), 200)
+            .get("content")
+            .get(0)
+            .get("strength")
+            .asText());
+    long ledgerBefore =
+        jdbc.queryForObject(
+            "select count(*) from inventory_ledger where medication_id=?",
+            Long.class,
+            UUID.fromString(item.get("id").asText()));
+    var changed = node(call("PATCH", path(item), Map.of("strength", "40 mg/tablet"), access), 200);
+    assertEquals("40 mg/tablet", changed.get("strength").asText());
+    assertEquals(
+        "40 mg/tablet",
+        node(call("PATCH", path(item), Map.of("name", "Renamed"), access), 200)
+            .get("strength")
+            .asText());
+    assertTrue(
+        node(call("PATCH", path(item), Map.of("strength", "  "), access), 200)
+            .get("strength")
+            .isNull());
+    assertEquals(
+        ledgerBefore,
+        jdbc.queryForObject(
+            "select count(*) from inventory_ledger where medication_id=?",
+            Long.class,
+            UUID.fromString(item.get("id").asText())));
+    assertEquals(
+        "30",
+        node(call("GET", "/api/v1/inventory/" + item.get("id").asText(), null, access), 200)
+            .get("balance")
+            .get("quantity")
+            .asText());
+  }
+
+  @Test
+  void strengthValidationAndOwnerScopeApplyWithoutRequiringLegacyClientsToSendIt()
+      throws Exception {
+    var item = create("Legacy optional strength");
+    assertTrue(item.get("strength").isNull());
+    error(
+        call(
+            "POST",
+            "/api/v1/medications",
+            Map.of("name", "Fictional", "unit", "tablet", "strength", "x".repeat(101)),
+            access),
+        422,
+        "VALIDATION_ERROR");
+    error(
+        call("PATCH", path(item), Map.of("strength", "x".repeat(101)), access),
+        422,
+        "VALIDATION_ERROR");
+    String another = login();
+    error(call("PATCH", path(item), Map.of("strength", "20 mg/tablet"), another), 404, "NOT_FOUND");
+    error(call("PATCH", path(item), Map.of("strength", "20 mg/tablet"), null), 401, "UNAUTHORIZED");
+    assertTrue(node(call("GET", path(item), null, access), 200).get("strength").isNull());
+  }
+
+  @Test
   void createReturnsLocationAndExactDecimalOpeningAmount() throws Exception {
     var response =
         call(

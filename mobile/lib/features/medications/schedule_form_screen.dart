@@ -175,7 +175,9 @@ class _PlanState extends ConsumerState<ScheduleFormScreen> {
                     decimal: true,
                   ),
                   decoration: InputDecoration(
-                    labelText: 'Her dozun miktarı',
+                    labelText: 'Her kullanımda alacağın miktar',
+                    helperText: 'İlacı eklerken seçtiğin birimle gir. Örneğin birim tabletse 1 = bir tablet, 0,5 = yarım tablet. Kendi kullanım planındaki miktarı yaz.',
+                    helperMaxLines: 4,
                     errorText: fieldError(_error, 'quantityPerDose'),
                   ),
                   validator: (v) => decimalError(v, positive: true),

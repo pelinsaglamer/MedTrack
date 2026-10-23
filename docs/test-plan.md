@@ -107,3 +107,7 @@ Backend total 108: dose detail owner/404/401 ve türetilen state, schedule histo
 113 backend testi: snooze owner/revision/UUID replay, immutable stock/action invariants, finalized/future/archive rejection, reminder candidates ve V7 migration. 51 mobil test: denied/revoked/exact fallback, IDs/collisions, UTC/DST overlap, content privacy, replacement/cancellation, logout/network/late-storage races ve auth cleanup retry.
 
 Android emülatör matrisi ve gözlemler: [Phase 8 raporu](phase-8-report.md). `mobile/tool/notification_emulator_test.py --mode denied|inexact|granted|tap|persistTap` build/install/izin senaryosu ve gerektiğinde OS bildirimi tap sürücüsünü çalıştırır. Native testin iz bırakması gereken reboot/upgrade senaryolarında `--no-uninstall` zorunludur. Normal integration_test çalıştırması uygulamayı kaldırabilir veya force-stop yapabilir; bunlar normal background reboot ile aynı gözlem değildir. Gerçek cihaz testi kullanıcı isteğiyle bekliyor.
+
+## Onaylı ilaç gücü eki
+
+115 backend + 52 mobil test. Yeni backend kontrolleri strength create/read/list/update/clear, 100 karakter sınırı, sahiplik ve auth, alanı göndermeyen eski istemci, stok miktarı ve ledger değişmezliğini doğrular. Upgrade testi eski ilaçların gücünü tahmin etmeden null bırakan V8'i kapsar. Mobil form testleri strength/unit/initialStock ayrımını ve mevcut güç bilgisini birim kilidinden bağımsız temizlemeyi doğrular. [Onaylı kapsam](SRS-addendum-medication-strength.md).
