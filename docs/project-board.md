@@ -1,6 +1,6 @@
 # Proje panosu
 
-Her faz kendi kapısı geçilmeden tamamlandı sayılmaz. Phase 0–6 ve onaylı haftalık özet mevcut kullanıcı kapsamıdır.
+Her faz kendi kapısı geçilmeden tamamlandı sayılmaz. Phase 0–7 ve onaylı haftalık özet mevcut kullanıcı kapsamıdır.
 
 | Faz | Kapsam | Durum | Çıkış kanıtı |
 |---|---|---|---|
@@ -11,7 +11,7 @@ Her faz kendi kapısı geçilmeden tamamlandı sayılmaz. Phase 0–6 ve onaylı
 | 4 | Versioned schedules | Yerel kontroller tamamlandı | 61 toplam test; UTC/DST; history/revisions; overlap/unique DB constraints |
 | 5 | Dose + inventory + onaylı haftalık özet | Yerel kontroller tamamlandı | 106 test; replay/concurrency/UNDO/ledger; V4 upgrade; MISSED/weekly owner counts |
 | 6 | Flutter temel | Yerel kontroller tamamlandı | Riverpod onaylı; 18 mobil test + 1 gerçek backend/emülatör testi; analyze/format ve debug APK başarılı |
-| 7 | Flutter akışları | Bekliyor | Online MVP |
+| 7 | Flutter akışları | Yerel kontroller tamamlandı | 108 backend + 32 mobil test; 2 emülatör akışı; format/analyze/debug APK |
 | 8 | Yerel bildirimler | Bekliyor | Gerçek cihaz kanıtı |
 | 9 | Offline sync | Bekliyor | Replay/conflict; DB kararı |
 | 10 | Privacy/hardening | Bekliyor | Tüm MUST testleri |

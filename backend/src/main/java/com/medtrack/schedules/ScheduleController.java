@@ -17,6 +17,21 @@ public class ScheduleController {
     this.schedules = schedules;
   }
 
+  @GetMapping
+  @Operation(summary = "List own medication schedule versions, newest first")
+  public ScheduleDtos.History list(
+      @PathVariable UUID medicationId,
+      @RequestParam(defaultValue = "0")
+          @jakarta.validation.constraints.Min(0)
+          @jakarta.validation.constraints.Max(10000)
+          int page,
+      @RequestParam(defaultValue = "20")
+          @jakarta.validation.constraints.Min(1)
+          @jakarta.validation.constraints.Max(100)
+          int size) {
+    return schedules.list(medicationId, page, size);
+  }
+
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
   @Operation(

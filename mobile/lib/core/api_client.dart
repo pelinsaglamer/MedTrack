@@ -19,6 +19,15 @@ class ApiFailure implements Exception {
     'UNAUTHORIZED' => 'Oturumunuz sona erdi. Yeniden giriş yapın.',
     'RATE_LIMITED' =>
       'Çok fazla deneme yapıldı. Bir süre sonra tekrar deneyin.',
+    'DOSE_STATE_CONFLICT' =>
+      'Doz kaydı değişmiş. Güncel durumu kontrol edip yeniden seçim yapın.',
+    'SCHEDULE_CONFLICT' => 'Plan değişikliği mevcut kayıtlarla çakışıyor. Planı yenileyip kontrol edin.',
+    'MEDICATION_UNIT_LOCKED' => 'Stok veya plan geçmişi varken birim değişmez. Farklı birim için yeni ilaç ekleyin.',
+    'MEDICATION_UNIT_CONFLICT' =>
+      'Dozun birimi stok birimiyle uyuşmuyor. Kaydı kontrol edin.',
+    'NOT_FOUND' => 'Kayıt bulunamadı veya artık erişilemiyor.',
+    'IDEMPOTENCY_KEY_REUSED' =>
+      'İşlem kaydı uyuşmuyor. Güncel durumu kontrol edin.',
     'VALIDATION_ERROR' => 'Girdiğiniz alanları kontrol edin.',
     'NETWORK' =>
       'Sunucuya ulaşılamadı. Bağlantınızı kontrol edip tekrar deneyin.',
@@ -55,10 +64,12 @@ class ApiClient {
     String path, {
     Map<String, dynamic>? body,
     String? token,
+    Map<String, String> headers = const {},
   }) async {
     try {
       final request = http.Request(method, Uri.parse('$baseUrl$path'));
       request.followRedirects = false;
+      request.headers.addAll(headers);
       request.headers['Accept'] = 'application/json';
       if (token != null) request.headers['Authorization'] = 'Bearer $token';
       if (body != null) {

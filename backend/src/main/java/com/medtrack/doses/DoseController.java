@@ -29,6 +29,12 @@ public class DoseController {
     return doses.list(date, page, size);
   }
 
+  @GetMapping("/{id}")
+  @Operation(summary = "Read own dose detail")
+  public DoseDtos.View get(@PathVariable java.util.UUID id) {
+    return doses.get(id);
+  }
+
   @GetMapping("/summary")
   @Operation(
       summary = "Weekly counts of confirmed, skipped and unconfirmed doses",

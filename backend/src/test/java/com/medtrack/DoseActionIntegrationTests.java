@@ -35,6 +35,46 @@ class DoseActionIntegrationTests {
   UUID due;
   UUID future;
 
+  @Test
+  void doseDetailRefreshesStateAndHidesOtherOwners() throws Exception {
+    var detail = node(call("GET", "/api/v1/doses/" + due, null, null, token), 200);
+    assertEquals(due.toString(), detail.get("id").asText());
+    assertEquals("DUE", detail.get("status").asText());
+    assertEquals(
+        "PENDING",
+        node(call("GET", "/api/v1/doses/" + future, null, null, token), 200)
+            .get("status")
+            .asText());
+    String other = login();
+    error(call("GET", "/api/v1/doses/" + due, null, null, other), 404, "NOT_FOUND");
+    error(call("GET", "/api/v1/doses/" + UUID.randomUUID(), null, null, other), 404, "NOT_FOUND");
+    error(call("GET", "/api/v1/doses/" + due, null, null, null), 401, "UNAUTHORIZED");
+  }
+
+  @Test
+  void scheduleHistoryIsBoundedAndOwnerScoped() throws Exception {
+    var response =
+        node(
+            call(
+                "GET",
+                "/api/v1/medications/" + med + "/schedules?page=0&size=1",
+                null,
+                null,
+                token),
+            200);
+    assertEquals(1, response.get("content").size());
+    assertEquals(1, response.get("content").get(0).get("version").asInt());
+    assertEquals(
+        422,
+        call("GET", "/api/v1/medications/" + med + "/schedules?size=101", null, null, token)
+            .statusCode());
+    String other = login();
+    error(
+        call("GET", "/api/v1/medications/" + med + "/schedules", null, null, other),
+        404,
+        "NOT_FOUND");
+  }
+
   @BeforeEach
   void setup() throws Exception {
     token = login();

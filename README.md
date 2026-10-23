@@ -4,7 +4,7 @@ Türkçe ilaç planı ve stok takibi uygulaması. Ana gereksinim kaynakları [SR
 
 ## Durum
 
-Phase 0–6 yerel kabul kontrolleri tamamlandı. Ayrıntılı durum ve sonraki aşamalar: [proje panosu](docs/project-board.md). Android istemcisinde giriş ve ilaç listesi Phase 6 kapsamında hazır.
+Phase 0–7 yerel kabul kontrolleri tamamlandı. Ayrıntılı durum ve sonraki aşamalar: [proje panosu](docs/project-board.md). Android istemcisinde online ilaç, kullanım planı, günlük doz, stok ve geçmiş akışları hazır.
 
 ## Gereksinimler
 
@@ -124,6 +124,6 @@ Stok bilinmiyorsa sıfır varsayılmaz; negatif stok kullanıcı onaylı TAKEN k
 Stok/plan geçmişi oluşmuş bir ilaçta birim değiştirilemez. Farklı birim için yeni kayıt açın. Haftalık özet SKIPPED ve MISSED'i ayırır; teyit yokluğu ilaç alınmadığı anlamına gelmez. Gerçek mobil offline kuyruğu Phase 9'da uygulanacak; bu faz sunucu tarafındaki retry/transaction güvenliğini sağlar.
 
 
-## Flutter istemcisi — Phase 6
+## Flutter istemcisi — Phase 6–7
 
-Android giriş, güvenli oturum yenileme ve ilaç listesi hazır. Kurulum ve emülatör/USB cihaz komutları [mobil README](mobile/README.md) içinde. İlaç formu ve günlük doz/stok/geçmiş ekranları Phase 7 kapsamında devam edecek. Doğrulama ve mevcut sınırlamalar: [Phase 6 raporu](docs/phase-6-report.md).
+Android kayıt/giriş, güvenli oturum, ilaç oluşturma/düzenleme/arşivleme, plan sürümleri, günlük/geçmiş doz, Aldım/Atladım/UNDO, stok ve haftalık özet hazır. Kurulum ve emülatör/USB cihaz komutları [mobil README](mobile/README.md) içinde. Sonuç ve sınırlamalar: [Phase 7 raporu](docs/phase-7-report.md). Yerel bildirimler Phase 8'de devam edecek.

@@ -1,6 +1,7 @@
-# MedTrack mobil — Phase 6
+# MedTrack mobil — Phase 6–7
 
-Android öncelikli, Türkçe Flutter istemcisi. Phase 6 kapsamı: giriş, güvenli oturum, korumalı yönlendirme ve aktif ilaç listesi. Kullanıcının 23 Ekim 2026 tarihli isteğiyle mobil kayıt ekranı da eklendi. Riverpod seçimi kullanıcı tarafından 23 Ekim 2026'da onaylandı. Formlar, günlük doz/stock/history ekranları Phase 7'de; bildirimler Phase 8'de, yerel DB/offline sync Phase 9'da.
+Android öncelikli Türkçe online istemci. Riverpod seçimi kullanıcı tarafından onaylandı. Phase 7'de ilaç, plan, günlük/geçmiş doz, teyit/UNDO, stok ve haftalık özet akışları tamamlandı. Bildirimler Phase 8'de, offline DB/sync Phase 9'da.
+
 
 ## Çalıştırma
 
@@ -35,7 +36,7 @@ flutter run --dart-define=API_BASE_URL=https://YOUR_HOST/api/v1
 
 URL `/api/v1` ile, sonunda `/` olmadan bitmeli; parola/token/query içeremez. HTTP yalnız debug ve `10.0.2.2`/`127.0.0.1`/`localhost` için kabul edilir. Release için HTTPS zorunlu; yayın imzası/mağaza paketi bu fazın kapsamı değildir. Backend CORS ayarı mobil native HTTP için gerekmez.
 
-Giriş ekranındaki **Hesabın yok mu? Kayıt ol** bağlantısıyla hesap oluşturulur. E-posta, en az 12 karakterli şifre, şifre tekrarı ve saat dilimi istenir. Varsayılan `Europe/Istanbul` değiştirilebilir; IANA bölgesini backend doğrular. Şifre UTF-8 olarak en fazla 72 byte olabilir. Başarılı kayıt otomatik oturum açmaz; giriş ekranına dönerek başarı mesajı gösterir. Mükerrer hesap/alan/ağ hataları güvenli mesajlarla sunulur. Gerçek hasta verisi kullanma. Bu fazda ilaç eklemek için yerel [Swagger](http://localhost:8080/swagger-ui/index.html) `/medications` kullanılır.
+Giriş ekranındaki **Hesabın yok mu? Kayıt ol** bağlantısıyla hesap oluşturulur. E-posta, en az 12 karakterli şifre, şifre tekrarı ve saat dilimi istenir. Varsayılan `Europe/Istanbul` değiştirilebilir; IANA bölgesini backend doğrular. Şifre UTF-8 olarak en fazla 72 byte olabilir. Başarılı kayıt otomatik oturum açmaz; giriş ekranına dönerek başarı mesajı gösterir. Mükerrer hesap/alan/ağ hataları güvenli mesajlarla sunulur. Gerçek hasta verisi kullanma. İlaçlarım → İlaç ekle üzerinden ilaç oluştur; detayından kullanım planını gir. Başlangıç stoku bilinmiyorsa boş bırak. Günlük ekranından doz seçip açık teyit ver; stok ekranından hareketleri incele.
 
 ## Yapı ve güvenlik davranışı
 
@@ -48,7 +49,7 @@ Giriş ekranındaki **Hesabın yok mu? Kayıt ol** bağlantısıyla hesap oluşt
 - 401 için tek refresh + tek tekrar; paralel istekler aynı refresh Future'ını bekler. Belirsiz/başarısız rotasyonda eski refresh yeniden kullanılmaz, yerel oturum temizlenir. Bu durumda yeniden giriş gerekir.
 - Normal veri isteğinde bağlantı hatası tokenları silmez. Başlangıçta bağlantı yoksa retry ekranı; refresh sonucu belirsizse yeniden giriş. Güvenli kayıt silinemezse erişim bloke edilir ve retry önce silmeyi tekrarlar.
 - Çıkış sunucudaki session'ı iptal eder ve yerel tokenları temizler. Ağ hatasında yerel çıkış yapılır; sunucu iptalinin doğrulanamadığı açıkça gösterilir.
-- İlaç listesinde `initialStock` güncel stok olarak gösterilmez; decimal veriler string olarak korunur. Güncel stok ekranı Phase 7'de.
+- İlaç listesinde `initialStock` güncel stok olarak gösterilmez; decimal veriler string olarak korunur. Güncel bakiye stok ekranından okunur.
 
 ## Doğrulama
 
@@ -68,3 +69,12 @@ flutter test integration_test/phase6_test.dart -d emulator-5554
 Bu test yalnız kurgusal `phase6-…@example.invalid` hesabı ve örnek ilaç oluşturur; tokenları yazdırmaz. Android secure store üzerinden session restore ve logout sonrası server 401 kontrol edilir. Veri geliştirme DB'sinde kurgusal fixture olarak kalır. Test sonrası uygulama oturumu kapalıdır. Otomatik CI emülatör testini çalıştırmaz; unit/widget testleri, analyze, format ve debug APK derlemesini çalıştırır.
 
 APK: `build/app/outputs/flutter-apk/app-debug.apk` (Git'e eklenmez). iOS, Xcode/CocoaPods ve cihaz doğrulaması kurulmadığı için bu fazda üretilmedi.
+
+
+## Phase 7 kullanım ve bağlantı kuralları
+
+İlaçlarım kartları detay/düzenleme/plan/arşiv akışına; Günlük sekmesi hesap bölgesindeki bugün ve tarih seçilen geçmişe; Haftalık sekmesi onaylı özete gider. Doz detayı Aldım/Atladım/UNDO için onay ister, stok defteri ve değişmez işlem geçmişini gösterir. “Zamanında teyit yok” kesin alınmama iddiası değildir. Stok düzeltmesinde ek miktar yerine fiziksel toplam girilir. Tahminler açıkça “Tahmini”dir; uygun veri yoksa gerekçe gösterilir.
+
+Belirsiz doz/stok isteğinde “Aynı işlemi tekrar dene” özgün kimlik ve payload'ı kullanır. Bu kayıt yalnız mevcut session belleğinde tutulur; uygulamayı kapatıp açma veya offline queue garantisi Phase 9'a aittir. Yeni ilaç/plan oluşturma yanıtı belirsizse kör tekrar yerine liste/plan geçmişi kontrol edilir. Formlar ondalık virgülü noktaya dönüştürür; floating point hesap yapmaz.
+
+Tüm native akış testleri için backend açıkken `flutter test integration_test -d emulator-5554` çalıştır. `phase7_test.dart` kurgusal hesapla online ilaç/plan/TAKEN/UNDO/SKIPPED/stock/edit/archive akışını kontrol eder. Testler geliştirme emülatöründe kurgusal session kullanır ve çıkışla biter; kişisel hesabını kullanmaz. Fixture'lar geliştirme DB'sinde kalır.

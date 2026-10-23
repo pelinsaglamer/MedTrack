@@ -192,4 +192,33 @@ void main() {
       expect(c.read(sessionProvider).status, SessionStatus.signedOut);
     },
   );
+  test(
+    'authorized POST keeps body and idempotency key across refresh',
+    () async {
+      final store = MemoryStore()..tokens = const Tokens('old', 'r1');
+      final requests = <http.Request>[];
+      final c = await setup(store, (r) async {
+        if (r.url.path.endsWith('/account/me')) return jsonResponse({});
+        if (r.url.path.endsWith('/refresh')) {
+          return jsonResponse({'accessToken': 'new', 'refreshToken': 'r2'});
+        }
+        requests.add(r);
+        return r.headers['Authorization'] == 'Bearer old'
+            ? jsonResponse({'code': 'UNAUTHORIZED'}, 401)
+            : jsonResponse({});
+      });
+      addTearDown(c.dispose);
+      await c
+          .read(sessionProvider.notifier)
+          .authorized(
+            'POST',
+            '/doses/fixture/actions',
+            body: {'action': 'TAKEN'},
+            headers: {'Idempotency-Key': 'fixture-operation'},
+          );
+      expect(requests, hasLength(2));
+      expect(requests[0].body, requests[1].body);
+      expect(requests[1].headers['Idempotency-Key'], 'fixture-operation');
+    },
+  );
 }

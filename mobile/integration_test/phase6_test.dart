@@ -77,7 +77,7 @@ void main() {
       await tester.enterText(find.byType(TextFormField).at(1), password);
       await tester.tap(find.byType(FilledButton));
       await waitFor(tester, find.text('Örnek ilaç — Phase 6'));
-      expect(find.text('İlaçlarım'), findsOneWidget);
+      expect(find.text('İlaçlarım'), findsNWidgets(2));
       expect(find.text('Örnek ilaç — Phase 6'), findsOneWidget);
       expect(await store.read(), isNotNull);
       // Rebuild with a fresh ProviderScope: restoration must use Android secure storage.

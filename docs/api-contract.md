@@ -1,4 +1,4 @@
-# API sözleşmesi — Phase 1–5
+# API sözleşmesi — Phase 1–7
 
 Kaynak: SRS §8. Domain API tabanı `/api/v1`; auth/account ve ilaç endpointleri aşağıdadır; schedule ve günlük doz endpointleri aşağıdadır; doz işlemleri, inventory ve haftalık özet aşağıdadır.
 
@@ -183,3 +183,11 @@ GET `/api/v1/doses/summary?weekStart=2026-10-19`: date verilmezse account zone'u
 ```
 
 Current status alanları ayrışıktır ve toplamları scheduledDoses'a eşittir. unconfirmedAtDeadline tarihsel ek metriktir; sonradan TAKEN/SKIPPED olmuş bir doz için de missedAt izi kalabilir. Bu alan diğer sayaçlarla örtüşebilir, toplam içine tekrar eklenmez. Haftaya dahil etme planned due time'a göre account timezone'unda yapılır; eylemin sonradan kaydedildiği haftaya göre değildir. “Atlandı” ve “zamanında teyit girilmedi” ayrı anlamlardır; “ilaç unutuldu” sonucu çıkarılmaz.
+
+
+## Phase 7 — mobil detay okumaları
+
+- `GET /api/v1/doses/{id}`: daily View ile aynı gövde; owner scope ve medication row lock altında MISSED durumu yenilenir. Yalnız mevcut occurrence okunur; bu rota yeni slot üretmez. Yabancı/bulunamayan 404, kimliksiz 401.
+- `GET /api/v1/medications/{id}/schedules?page=0&size=20`: `{content:[ScheduleView],page,size,totalElements,totalPages}`; version DESC. Parent medication owner kontrol edilir; arşivli ilacın geçmişi okunabilir. Page 0–10000, size 1–100; validation 422. Yabancı/bulunamayan parent 404.
+
+Mobil istemci decimal miktarları string olarak taşır. Yetkili POST, access refresh sırasında gövde ve Idempotency-Key'i aynen korur. Doz/stock belirsiz retry aynı işlem kimliğidir; medication/schedule create için otomatik tekrar yoktur.

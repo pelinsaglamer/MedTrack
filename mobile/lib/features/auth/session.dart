@@ -95,11 +95,22 @@ class SessionController extends Notifier<SessionState> {
     }
   }
 
-  Future<Map<String, dynamic>> authorized(String method, String path) async {
+  Future<Map<String, dynamic>> authorized(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+    Map<String, String> headers = const {},
+  }) async {
     final original = _tokens;
     if (original == null) throw const ApiFailure('UNAUTHORIZED', status: 401);
     try {
-      return await _api.request(method, path, token: original.accessToken);
+      return await _api.request(
+        method,
+        path,
+        body: body,
+        headers: headers,
+        token: original.accessToken,
+      );
     } on ApiFailure catch (e) {
       if (e.status != 401) rethrow;
     }
@@ -114,7 +125,13 @@ class SessionController extends Notifier<SessionState> {
     final current = _tokens;
     if (current == null) throw const ApiFailure('UNAUTHORIZED', status: 401);
     try {
-      return await _api.request(method, path, token: current.accessToken);
+      return await _api.request(
+        method,
+        path,
+        body: body,
+        headers: headers,
+        token: current.accessToken,
+      );
     } on ApiFailure catch (e) {
       if (e.status == 401) await _forget();
       rethrow;

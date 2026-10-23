@@ -81,7 +81,7 @@ void main() {
     );
     await tester.tap(find.byType(FilledButton));
     await tester.pumpAndSettle();
-    expect(find.text('İlaçlarım'), findsOneWidget);
+    expect(find.text('İlaçlarım'), findsNWidgets(2));
     expect(find.text('Örnek ilaç'), findsOneWidget);
     expect(find.textContaining('30'), findsNothing);
     await tester.tap(find.byTooltip('Çıkış yap'));

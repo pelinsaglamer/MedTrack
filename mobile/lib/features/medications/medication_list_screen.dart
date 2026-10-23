@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/api_client.dart';
 import '../../shared/design.dart';
 import '../auth/session.dart';
 import 'medication.dart';
+import '../online/data.dart';
+import '../online/widgets.dart';
 
 class MedicationListScreen extends ConsumerStatefulWidget {
   const MedicationListScreen({super.key});
@@ -38,6 +41,12 @@ class _MedicationListScreenState extends ConsumerState<MedicationListScreen> {
   Widget build(BuildContext context) {
     final result = ref.watch(medicationsProvider(_page));
     return Scaffold(
+      bottomNavigationBar: const MainNavigation(0),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => context.push('/medications/new'),
+        icon: const Icon(Icons.add),
+        label: const Text('İlaç ekle'),
+      ),
       appBar: AppBar(
         title: const Text('İlaçlarım'),
         actions: [
@@ -62,6 +71,7 @@ class _MedicationListScreenState extends ConsumerState<MedicationListScreen> {
           data: (data) => RefreshIndicator(
             onRefresh: () async {
               ref.invalidate(medicationsProvider(_page));
+              ref.invalidate(inventoryProvider);
               try {
                 await ref.read(medicationsProvider(_page).future);
               } catch (_) {
@@ -97,7 +107,15 @@ class _MedicationListScreenState extends ConsumerState<MedicationListScreen> {
                     child: ListTile(
                       leading: const Icon(Icons.medication_outlined),
                       title: Text(medication.name),
-                      subtitle: Text('Birim: ${medication.unit}'),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Birim: ${medication.unit}'),
+                          StockBadge(medication.id),
+                        ],
+                      ),
+                      onTap: () =>
+                          context.push('/medications/${medication.id}'),
                     ),
                   ),
                 if (data.totalPages > 1 || _page > 0)
@@ -133,4 +151,18 @@ class _MedicationListScreenState extends ConsumerState<MedicationListScreen> {
       ),
     );
   }
+}
+
+class StockBadge extends ConsumerWidget {
+  const StockBadge(this.id, {super.key});
+  final String id;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) => ref
+      .watch(inventoryProvider((id, 0)))
+      .when(
+        loading: () => const Text('Stok yükleniyor…'),
+        error: (_, _) => const Text('Stok yüklenemedi'),
+        data: (v) =>
+            Text(v.known ? 'Stok: ${v.quantity} ${v.unit}' : 'Stok bilinmiyor'),
+      );
 }

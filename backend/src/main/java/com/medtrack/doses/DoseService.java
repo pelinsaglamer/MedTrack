@@ -42,6 +42,26 @@ public class DoseService {
   }
 
   @Transactional
+  public DoseDtos.View get(java.util.UUID id) {
+    var owner = current.id();
+    var med =
+        doses
+            .ownedMedicationId(id, owner)
+            .orElseThrow(
+                () -> new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "Resource not found"));
+    medications
+        .findOwnedForUpdate(med, owner)
+        .orElseThrow(
+            () -> new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "Resource not found"));
+    var now = clock.instant();
+    states.refresh(med, now);
+    return doses
+        .get(id, owner, now)
+        .orElseThrow(
+            () -> new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "Resource not found"));
+  }
+
+  @Transactional
   public DoseDtos.Page list(LocalDate requested, int page, int size) {
     var owner = current.id();
     ZoneId zone = ZoneId.of(users.findById(owner).orElseThrow().timezone());

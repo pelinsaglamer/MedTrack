@@ -32,6 +32,9 @@ public final class ScheduleDtos {
     }
   }
 
+  public record History(
+      List<View> content, int page, int size, long totalElements, int totalPages) {}
+
   public record View(
       UUID id,
       UUID medicationId,

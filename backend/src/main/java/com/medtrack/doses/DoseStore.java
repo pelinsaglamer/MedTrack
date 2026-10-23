@@ -100,33 +100,7 @@ public class DoseStore {
             "select d.*,s.medication_id,s.version as schedule_version_number,s.quantity_per_dose,s.timezone, (select a.id from dose_actions a where a.occurrence_id=d.id order by a.occurrence_version desc limit 1) as last_action_id, (select a.recorded_at from dose_actions a where a.occurrence_id=d.id order by a.occurrence_version desc limit 1) as action_recorded_at"
                 + joins
                 + " order by d.due_at_utc,d.id limit ? offset ?",
-            (rs, n) -> {
-              Instant due = rs.getTimestamp("due_at_utc").toInstant();
-              String status = rs.getString("status");
-              if (status.equals("PENDING") || status.equals("DUE"))
-                status = due.isAfter(now) ? "PENDING" : "DUE";
-              return new DoseDtos.View(
-                  rs.getObject("id", UUID.class),
-                  rs.getObject("medication_id", UUID.class),
-                  rs.getObject("schedule_version_id", UUID.class),
-                  rs.getInt("schedule_version_number"),
-                  rs.getString("medication_name"),
-                  rs.getString("unit"),
-                  rs.getBigDecimal("quantity_per_dose").stripTrailingZeros().toPlainString(),
-                  due,
-                  rs.getObject("local_date", LocalDate.class),
-                  rs.getObject("local_time", LocalTime.class).toString(),
-                  rs.getString("timezone"),
-                  status,
-                  rs.getLong("version"),
-                  rs.getObject("last_action_id", UUID.class),
-                  rs.getTimestamp("action_recorded_at") == null
-                      ? null
-                      : rs.getTimestamp("action_recorded_at").toInstant(),
-                  rs.getTimestamp("missed_at") == null
-                      ? null
-                      : rs.getTimestamp("missed_at").toInstant());
-            },
+            (rs, n) -> view(rs, now),
             owner,
             Timestamp.from(from),
             Timestamp.from(until),
@@ -134,5 +108,53 @@ public class DoseStore {
             (long) page * size);
     return new DoseDtos.Page(
         rows, date, zone.getId(), page, size, count, (int) ((count + size - 1) / size));
+  }
+
+  public Optional<UUID> ownedMedicationId(UUID id, UUID owner) {
+    return jdbc
+        .query(
+            "select s.medication_id from dose_occurrences d join schedule_versions s on s.id=d.schedule_version_id join medications m on m.id=s.medication_id where d.id=? and m.user_id=?",
+            (rs, n) -> rs.getObject(1, UUID.class),
+            id,
+            owner)
+        .stream()
+        .findFirst();
+  }
+
+  public Optional<DoseDtos.View> get(UUID id, UUID owner, Instant now) {
+    return jdbc
+        .query(
+            "select d.*,s.medication_id,s.version as schedule_version_number,s.quantity_per_dose,s.timezone, (select a.id from dose_actions a where a.occurrence_id=d.id order by a.occurrence_version desc limit 1) as last_action_id, (select a.recorded_at from dose_actions a where a.occurrence_id=d.id order by a.occurrence_version desc limit 1) as action_recorded_at from dose_occurrences d join schedule_versions s on s.id=d.schedule_version_id join medications m on m.id=s.medication_id where d.id=? and m.user_id=?",
+            (rs, n) -> view(rs, now),
+            id,
+            owner)
+        .stream()
+        .findFirst();
+  }
+
+  private DoseDtos.View view(java.sql.ResultSet rs, Instant now) throws java.sql.SQLException {
+    Instant due = rs.getTimestamp("due_at_utc").toInstant();
+    String status = rs.getString("status");
+    if (status.equals("PENDING") || status.equals("DUE"))
+      status = due.isAfter(now) ? "PENDING" : "DUE";
+    return new DoseDtos.View(
+        rs.getObject("id", UUID.class),
+        rs.getObject("medication_id", UUID.class),
+        rs.getObject("schedule_version_id", UUID.class),
+        rs.getInt("schedule_version_number"),
+        rs.getString("medication_name"),
+        rs.getString("unit"),
+        rs.getBigDecimal("quantity_per_dose").stripTrailingZeros().toPlainString(),
+        due,
+        rs.getObject("local_date", LocalDate.class),
+        rs.getObject("local_time", LocalTime.class).toString(),
+        rs.getString("timezone"),
+        status,
+        rs.getLong("version"),
+        rs.getObject("last_action_id", UUID.class),
+        rs.getTimestamp("action_recorded_at") == null
+            ? null
+            : rs.getTimestamp("action_recorded_at").toInstant(),
+        rs.getTimestamp("missed_at") == null ? null : rs.getTimestamp("missed_at").toInstant());
   }
 }

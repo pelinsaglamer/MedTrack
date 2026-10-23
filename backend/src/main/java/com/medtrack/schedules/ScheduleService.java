@@ -42,6 +42,25 @@ public class ScheduleService {
     this.users = users;
   }
 
+  @Transactional(readOnly = true)
+  public ScheduleDtos.History list(UUID medicationId, int page, int size) {
+    medications
+        .findByIdAndUserId(medicationId, current.id())
+        .orElseThrow(
+            () -> new ApiException(HttpStatus.NOT_FOUND, "NOT_FOUND", "Resource not found"));
+    var rows =
+        versions.findByMedicationId(
+            medicationId,
+            org.springframework.data.domain.PageRequest.of(
+                page, size, org.springframework.data.domain.Sort.by("version").descending()));
+    return new ScheduleDtos.History(
+        rows.getContent().stream().map(ScheduleDtos.View::from).toList(),
+        page,
+        size,
+        rows.getTotalElements(),
+        rows.getTotalPages());
+  }
+
   @Transactional
   public ScheduleDtos.View create(UUID medicationId, ScheduleDtos.Create input) {
     var medication =

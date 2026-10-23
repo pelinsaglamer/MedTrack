@@ -124,3 +124,15 @@ Kullanıcı Riverpod seçimini açıkça onayladı. SRS Phase 6 çıkış kapıs
 - iOS, offline DB/cache/queue, notifications ve ek ürün ekranları bu fazda yoktur. Mobil kayıt ekranı Phase 6 kapısı için gerekli değildir; backend kayıt API'si kullanılabilir.
 
 Kaynaklar: [Flutter routing](https://docs.flutter.dev/ui/navigation), [Riverpod ProviderScope](https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/ProviderScope-class.html), [secure storage Android yapılandırması](https://pub.dev/packages/flutter_secure_storage).
+
+
+## Phase 7 — online Flutter akışları — 23 Ekim 2026
+
+- Yeni ürün tercihi veya kütüphane kararı gerektirilmedi; Riverpod/go_router/http temeli korundu. UUID doğrudan mobil bağımlılık yapıldı (önceden transitifti).
+- Domain typed modelleri ve online API/provider katmanı eklendi. Nested routes ilaç form/detay/plan/stok ve günlük/doz hiyerarşisini korur; doğrudan detay yolu da üst ekrana geri döner.
+- İlaç ve plan iki ayrı backend transaction'ı olduğu için UI bunları ayrı kayıt adımları olarak sunar. Birinci adım başarılıysa ikinci adımın hatası yeni ilaç oluşturmaya yol açmaz.
+- Doz/stok işlemleri session-scoped in-memory pending registry ile dondurulur. UUID, recordedAt, miktar ve expectedVersion retry sırasında değişmez; aynı scope'ta tek in-flight istek. Kesin conflict sonrası refresh; belirsiz transport/5xx için exact replay. Disk kuyruğu ve process-restart garantisi Phase 9'a bırakıldı.
+- Medication/schedule create idempotent değildir; belirsiz sonuçta form tekrar yazmayı kapatır ve mevcut kayıt/sürüm kontrolüne yönlendirir. PATCH metadata ve archive mevcut backend sözleşmesini kullanır.
+- Miktarlarda double kullanılmaz. Hesap-zone gün anahtarları backend'den gelir; istemcinin gün/hafta anahtarı aritmetiği UTC takvim tarihidir. Plan bölgeleri ve UTC action zamanları ayrı etiketlenir.
+- Mobil doz detayı/plan geçmişi için iki owner-scoped okuma API'si eklendi; yeni şema/migration veya auth politikası yoktur. History pagination lazy mapping transaction içinde yapılır; collection fetch ile sayfa sınırı bellekte uygulanmaz.
+- Stok rozeti mevcut sayfadaki ilaçlar için sınırlı inventory okumaları kullanır; büyük veri optimizasyonu/performance gate Phase 10 değerlendirmesine bırakılır.

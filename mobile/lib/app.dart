@@ -6,6 +6,13 @@ import 'package:go_router/go_router.dart';
 import 'features/auth/session.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
+import 'features/medications/medication_form_screen.dart';
+import 'features/medications/medication_detail_screen.dart';
+import 'features/medications/schedule_form_screen.dart';
+import 'features/online/dashboard_screen.dart';
+import 'features/online/dose_detail_screen.dart';
+import 'features/online/inventory_screen.dart';
+import 'features/online/summary_screen.dart';
 import 'features/medications/medication_list_screen.dart';
 import 'shared/design.dart';
 
@@ -20,6 +27,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (status == SessionStatus.signedOut && state.uri.path == '/register') {
         return null;
       }
+      if (status == SessionStatus.signedIn &&
+          !['/startup', '/login', '/register'].contains(state.uri.path)) {
+        return null;
+      }
       final target = switch (status) {
         SessionStatus.loading || SessionStatus.unavailable => '/startup',
         SessionStatus.signedOut => '/login',
@@ -28,15 +39,58 @@ final routerProvider = Provider<GoRouter>((ref) {
       return state.uri.path == target ? null : target;
     },
     routes: [
-      GoRoute(path: '/startup', builder: (_, _) => const StartupScreen()),
-      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
+      GoRoute(
+        path: '/today',
+        builder: (_, _) => const DashboardScreen(),
+        routes: [
+          GoRoute(
+            path: 'doses/:id',
+            builder: (_, s) => DoseDetailScreen(id: s.pathParameters['id']!),
+          ),
+        ],
+      ),
+      GoRoute(path: '/summary', builder: (_, _) => const SummaryScreen()),
       GoRoute(
         path: '/medications',
         builder: (_, _) => const MedicationListScreen(),
+        routes: [
+          GoRoute(path: 'new', builder: (_, _) => const MedicationFormScreen()),
+          GoRoute(
+            path: ':id',
+            builder: (_, s) =>
+                MedicationDetailScreen(id: s.pathParameters['id']!),
+            routes: [
+              GoRoute(
+                path: 'edit',
+                builder: (_, s) =>
+                    MedicationFormScreen(id: s.pathParameters['id']!),
+              ),
+              GoRoute(
+                path: 'plan',
+                builder: (_, s) =>
+                    ScheduleFormScreen(id: s.pathParameters['id']!),
+              ),
+              GoRoute(
+                path: 'inventory',
+                builder: (_, s) => InventoryScreen(id: s.pathParameters['id']!),
+              ),
+            ],
+          ),
+        ],
       ),
+      GoRoute(path: '/startup', builder: (_, _) => const StartupScreen()),
+      GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
     ],
-    errorBuilder: (context, state) => const StartupScreen(),
+    errorBuilder: (context, state) => Scaffold(
+      appBar: AppBar(title: const Text('Sayfa bulunamadı')),
+      body: Center(
+        child: TextButton(
+          onPressed: () => context.go('/medications'),
+          child: const Text('İlaçlarıma dön'),
+        ),
+      ),
+    ),
   );
   ref.onDispose(() {
     router.dispose();

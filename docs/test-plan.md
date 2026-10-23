@@ -93,3 +93,10 @@ Mobil offline queue, real-device notifications ve account deletion API testi son
 `mobile/`: 18 unit/widget testi; auth single-flight refresh, revoke/timeout, secure persistence ve clear hatası, offline restore/logout; login form validasyonu; liste/boş/hata/retry/sayfalama; 320px ekran ve 2x yazı. `flutter analyze --fatal-infos` ve Dart format zorunlu. Yeni Mobile CI aynı Flutter sürümüyle bu kontrolleri ve debug APK derlemesini çalıştırır.
 
 `integration_test/phase6_test.dart`: açık geliştirme backend'i + Android emülatörüyle kurgusal hesap/ilaç, login, Android secure store'dan fresh ProviderScope restore, liste, logout ve eski access token için server 401. CI bu testi otomatik çalıştırmaz; yerel sonuç Phase 6 raporunda tutulur. Gerçek hasta verisi yoktur; oluşturulan kurgusal fixture geliştirme DB'sinde kalır.
+
+
+## Phase 7 — online MVP
+
+Backend total 108: dose detail owner/404/401 ve türetilen state, schedule history owner/pagination. Mobil unit/widget: exact payload/key replay after network failure, double tap/in-flight, definitive conflict, 5xx pending retention, logout scope clear, JWT refresh preserving POST, decimal validation, UTC date navigation, create ambiguity guard, unknown inventory/forecast, explicit dose confirmation/cancel and stock correction confirmation.
+
+`flutter test integration_test -d emulator-5554`: Phase 6 auth regression ve Phase 7 gerçek backend online akışı. Kurgusal kullanıcıyla UI üzerinden ilaç/plan, TAKEN/UNDO/SKIPPED, balance 10 → 8.5 → 10 → 10, restock 15 ve correction 17.5, unit lock, name edit, archive ve retained history kontrolü. CI native emulator testini otomatik çalıştırmaz. Son kanıt [Phase 7 raporunda](phase-7-report.md).
