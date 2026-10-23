@@ -30,3 +30,6 @@
 **/build/
 **/.gradle/
 **/captures/
+
+# Kotlin compiler local state
+**/.kotlin/

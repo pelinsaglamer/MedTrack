@@ -8,12 +8,12 @@ Kaynak: SRS v1.0, §6.2 ve Appendix B. 22 Ekim 2026. SRS'deki ADR numaraları ko
 | ADR-02 Spring Boot + JPA | SRS kararı | Java 21, Spring Boot 4.1.2; katmanlı modüler monolit |
 | ADR-03 PostgreSQL + Flyway | SRS kararı | PostgreSQL 17.6; Hibernate `validate`; şemayı yalnız migration değiştirir |
 | ADR-04 Cihazda bildirim | SRS kararı | Phase 8; best effort, izin farkındalığı |
-| ADR-05 UUID/idempotency | SRS kararı | Phase 5/9; henüz davranış uygulanmadı |
+| ADR-05 UUID/idempotency | Phase 5 uygulandı | Backend işlem registry/replay; offline queue Phase 9 |
 | ADR-06 Değişmez geçmiş + schedule version | SRS kararı | Phase 4/5 |
 | ADR-07 Yerel DB | Kütüphane açık | Drift/SQLite önerisi Phase 9 öncesi görüşülecek |
 | ADR-08 MVP'de AI/ML yok | SRS kararı | Ek kapsam eklenmez |
 | BUILD-01 Maven | Kullanıcı onayladı | 22 Ekim 2026; Java 21 + Maven Wrapper |
-| MOBILE-01 State management | Açık | Riverpod Phase 6 öncesi onaylanacak |
+| MOBILE-01 State management | Kullanıcı onayladı / Phase 6 | 23 Ekim 2026; Riverpod, code generation olmadan |
 | AUTH-01 JWT + rotated refresh | Phase 2 uygulandı | SRS §6.1/11 modeli; rotasyon, replay ve logout testleri |
 | DOSE-01 UNDO | Kullanıcı onayladı / Phase 5 uygulandı | Son action için compensating entry; immutable audit |
 | PRIVACY-01 Silme/retention | Açık | Gerçek kullanıcı pilotundan önce politika ve erasure |
@@ -109,3 +109,18 @@ Kaynak: FR-006/009/010/014, BR-01/02/04, SRS §7/8/10/13 ve [onaylı ek](SRS-add
 - Stock veya plan geçmişi varsa unit değişimi 409 MEDICATION_UNIT_LOCKED; aynı değer noop. Geçmişsiz unknown-stock kaydında serbest. Legacy occurrence/stock unit farklılığında TAKEN 409 MEDICATION_UNIT_CONFLICT; otomatik dönüşüm yok.
 
 Referans: [PostgreSQL transaction isolation](https://www.postgresql.org/docs/17/transaction-iso.html), [Spring Data JPA locking](https://docs.spring.io/spring-data/jpa/reference/jpa/locking.html).
+
+
+## Phase 6 — Flutter foundations — 23 Ekim 2026
+
+Kullanıcı Riverpod seçimini açıkça onayladı. SRS Phase 6 çıkış kapısı giriş + ilaç listesi; yeni ürün kapsamı eklenmedi. Android ilk platform; iOS kurulumu önceki handoff'taki gibi sonraya bırakıldı.
+
+- Flutter 3.47.7/Dart 3.13.5; Riverpod 3.4.3, go_router 18.1.1, http 1.6.0, flutter_secure_storage 11.2.0. Çözümlenen sürümler pubspec.lock içinde sabitlenir; CI aynı Flutter sürümünü kullanır.
+- Notifier tabanlı session; go_router redirect guard; provider ile enjekte edilen transport/store. UI auth tokenlarını görmez. Async medication provider session durumuna bağlıdır; logout/session değişiminde önceki veriler ekrandan kaldırılır.
+- Tek refresh Future ve tek request retry; consumed refresh tekrar gönderilmez. Refresh'te ağ hatasının sonucu belirsiz olabileceğinden yerel session kapatılıp yeniden login istenir. Normal liste bağlantı hatası session'ı silmez.
+- Access+refresh birlikte tek güvenli kayıt olarak yazılır. Kalıcı kayıt başarısızsa login tamamlanmaz ve alınan server session iptal edilmeye çalışılır. Silme başarısızsa erişim bloke edilir; retry eski tokenları yüklemek yerine silmeyi tekrarlar.
+- Yerel cleartext sadece Android debug ağ güvenliği konfigürasyonundaki loopback/emulator adreslerine açıktır. Hosted/release HTTPS zorunludur. Redirect HTTP transport düzeyinde takip edilmez. Backend CORS kapsamı değiştirilmedi.
+- İlk tasarım sistemi Material 3, Türkçe locale, sistem açık/koyu tema, tutarlı boşluk/input/button/error öğeleri. İlaç listesinde yalnız metadata gösterilir; başlangıç stoku güncel bakiye olarak sunulmaz.
+- iOS, offline DB/cache/queue, notifications ve ek ürün ekranları bu fazda yoktur. Mobil kayıt ekranı Phase 6 kapısı için gerekli değildir; backend kayıt API'si kullanılabilir.
+
+Kaynaklar: [Flutter routing](https://docs.flutter.dev/ui/navigation), [Riverpod ProviderScope](https://pub.dev/documentation/flutter_riverpod/latest/flutter_riverpod/ProviderScope-class.html), [secure storage Android yapılandırması](https://pub.dev/packages/flutter_secure_storage).

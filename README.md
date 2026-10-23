@@ -4,7 +4,7 @@ Türkçe ilaç planı ve stok takibi uygulaması. Ana gereksinim kaynakları [SR
 
 ## Durum
 
-Phase 0–5 yerel kabul kontrolleri tamamlandı. Ayrıntılı durum ve sonraki aşamalar: [proje panosu](docs/project-board.md). Mobil uygulama Phase 6'da başlayacak.
+Phase 0–6 yerel kabul kontrolleri tamamlandı. Ayrıntılı durum ve sonraki aşamalar: [proje panosu](docs/project-board.md). Android istemcisinde giriş ve ilaç listesi Phase 6 kapsamında hazır.
 
 ## Gereksinimler
 
@@ -41,7 +41,7 @@ curl http://127.0.0.1:8080/actuator/health
 - `backend/`: Java 21, Spring Boot 4.1.2, Maven, JPA, Flyway, Actuator.
 - `infrastructure/`: yalnız loopback üzerinde PostgreSQL geliştirme/test servisleri.
 - `docs/`: SRS, ADR, API sözleşmesi, test planı, faz panosu ve çalışma raporu.
-- `mobile/`: Phase 6 için yer tutucu.
+- `mobile/`: Android Flutter istemcisi; Riverpod, güvenli oturum ve ilaç listesi.
 - `.github/workflows/backend.yml`: Java 21 + PostgreSQL üzerinde build/test/format kontrolü.
 
 Backend şu anda yerel geliştirme içindir. Kayıt/giriş, refresh rotasyonu, çıkış, hesap erişimi ve owner-scoped ilaç CRUD/arşivleme, sürümlü günlük planlar ve günlük doz görünümü uygulanmıştır. Hosted ortamlarda SRS gereği HTTPS kullanılmalı; mevcut loopback HTTP kurulumu hosted kabul kriterini karşılamaz.
@@ -73,7 +73,7 @@ API sözleşmesi ve örnek JSON: [API belgesi](docs/api-contract.md).
 
 CSRF kapalıdır çünkü kimlik doğrulama cookie üzerinden yapılmaz; API Bearer token kullanır. CORS için çapraz origin izni açılmamıştır. Auth istekleri tek süreçte doğrudan istemci IP'si başına dakikada 30 ile sınırlıdır. Çok instance/proxy deployment öncesi ortak limiter ve güvenilir proxy politikası gerekir.
 
-Refresh token'ın yanıtı kaybolursa eski token'ı tekrar göndermek oturumu kapatır; istemci Phase 6'da refresh çağrılarını tekleştirmeli ve bu durumda yeniden giriş istemelidir. Her korumalı istekte DB oturum durumu doğrulanır; logout/replay iptali access token için de hemen geçerlidir.
+Refresh token'ın yanıtı kaybolursa eski token'ı tekrar göndermek oturumu kapatır; Phase 6 istemcisi refresh çağrılarını tekleştirir ve bu durumda yeniden giriş ister. Her korumalı istekte DB oturum durumu doğrulanır; logout/replay iptali access token için de hemen geçerlidir.
 
 ## İlaç API ve Swagger — Phase 3
 
@@ -122,3 +122,8 @@ Swagger'da günlük dozun `id` değerini alıp `POST /api/v1/doses/{id}/actions`
 Stok bilinmiyorsa sıfır varsayılmaz; negatif stok kullanıcı onaylı TAKEN kaydını engellemez ve uyarı üretir. Sabit planlarda tahmin verilir; değişken/belirsiz planlarda nedeni açıklanan UNKNOWN döner. Tahmin doz önerisi değildir.
 
 Stok/plan geçmişi oluşmuş bir ilaçta birim değiştirilemez. Farklı birim için yeni kayıt açın. Haftalık özet SKIPPED ve MISSED'i ayırır; teyit yokluğu ilaç alınmadığı anlamına gelmez. Gerçek mobil offline kuyruğu Phase 9'da uygulanacak; bu faz sunucu tarafındaki retry/transaction güvenliğini sağlar.
+
+
+## Flutter istemcisi — Phase 6
+
+Android giriş, güvenli oturum yenileme ve ilaç listesi hazır. Kurulum ve emülatör/USB cihaz komutları [mobil README](mobile/README.md) içinde. İlaç formu ve günlük doz/stok/geçmiş ekranları Phase 7 kapsamında devam edecek. Doğrulama ve mevcut sınırlamalar: [Phase 6 raporu](docs/phase-6-report.md).

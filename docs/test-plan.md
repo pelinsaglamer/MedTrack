@@ -86,3 +86,10 @@ Toplam 106 test, 0 failure/error/skipped. Önceki 61 test + 45 yeni kontrol. 66 
 Rollback testi response tamamlanırken DB hatası üretir; action, ledger, snapshot, occurrence ve operation kayıtlarının hepsi geri alınır. Test trigger/function'ları finally içinde kaldırılır. Gerçek med verisi yoktur.
 
 Mobil offline queue, real-device notifications ve account deletion API testi sonraki fazlardır; server replay/parent cascade testleri bunların tamamlandığı anlamına gelmez.
+
+
+## Phase 6 — Flutter
+
+`mobile/`: 18 unit/widget testi; auth single-flight refresh, revoke/timeout, secure persistence ve clear hatası, offline restore/logout; login form validasyonu; liste/boş/hata/retry/sayfalama; 320px ekran ve 2x yazı. `flutter analyze --fatal-infos` ve Dart format zorunlu. Yeni Mobile CI aynı Flutter sürümüyle bu kontrolleri ve debug APK derlemesini çalıştırır.
+
+`integration_test/phase6_test.dart`: açık geliştirme backend'i + Android emülatörüyle kurgusal hesap/ilaç, login, Android secure store'dan fresh ProviderScope restore, liste, logout ve eski access token için server 401. CI bu testi otomatik çalıştırmaz; yerel sonuç Phase 6 raporunda tutulur. Gerçek hasta verisi yoktur; oluşturulan kurgusal fixture geliştirme DB'sinde kalır.
