@@ -21,7 +21,7 @@ Future<void> waitFor(WidgetTester tester, Finder finder) async {
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
   testWidgets(
-    'real backend login, secure-store restore, medication list, logout',
+    'real backend signup, login, secure-store restore, medication list, logout',
     (tester) async {
       // Creates fictional fixtures only. No real account or credentials are used.
       const base = String.fromEnvironment(
@@ -38,15 +38,19 @@ void main() {
         32,
         (_) => random.nextInt(16).toRadixString(16),
       ).join();
-      await api.request(
-        'POST',
-        '/auth/register',
-        body: {
-          'email': email,
-          'password': password,
-          'timezone': 'Europe/Istanbul',
-        },
-      );
+      final store = SecureTokenStore(const FlutterSecureStorage());
+      await store.clear();
+      await tester.pumpWidget(const ProviderScope(child: MedTrackApp()));
+      await waitFor(tester, find.byType(TextFormField));
+      await tester.ensureVisible(find.text('Hesabın yok mu? Kayıt ol'));
+      await tester.tap(find.text('Hesabın yok mu? Kayıt ol'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField).at(0), email);
+      await tester.enterText(find.byType(TextFormField).at(1), password);
+      await tester.enterText(find.byType(TextFormField).at(2), password);
+      await tester.ensureVisible(find.text('Hesap oluştur'));
+      await tester.tap(find.text('Hesap oluştur'));
+      await waitFor(tester, find.text('Hesabın yok mu? Kayıt ol'));
       final fixtureTokens = Tokens.fromJson(
         await api.request(
           'POST',
@@ -69,10 +73,6 @@ void main() {
         '/auth/logout',
         body: {'refreshToken': fixtureTokens.refreshToken},
       );
-      final store = SecureTokenStore(const FlutterSecureStorage());
-      await store.clear();
-      await tester.pumpWidget(const ProviderScope(child: MedTrackApp()));
-      await waitFor(tester, find.byType(TextFormField));
       await tester.enterText(find.byType(TextFormField).at(0), email);
       await tester.enterText(find.byType(TextFormField).at(1), password);
       await tester.tap(find.byType(FilledButton));

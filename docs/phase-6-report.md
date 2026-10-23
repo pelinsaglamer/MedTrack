@@ -25,7 +25,7 @@ Yerel HTTP yalnız debug ve emulator/loopback adresleri içindir. Hosted/release
 
 Komutlar, fixture davranışı ve güvenlik ayrıntıları [mobil README](../mobile/README.md) içinde. Backend `http://localhost:8080`, Android emulator API adresi `http://10.0.2.2:8080/api/v1`.
 
-İlk hesap backend register API'siyle oluşturulur; bu fazın mobil kapısı login + listedir. Mobil kayıt/ilaç formları, günlük doz, stok ve geçmiş ekranları Phase 7'de devam edecek. Bildirim Phase 8, offline DB/sync Phase 9, privacy/hardening Phase 10, yayın paketi Phase 11. iOS için tam Xcode/CocoaPods ve cihaz doğrulaması henüz yoktur; iOS derlemesi yapıldığı iddia edilmez. Android emülatörü fiziksel cihaz testi yerine geçmez.
+İlk teslimde hesap backend register API'siyle oluşturuluyordu; aşağıdaki kullanıcı isteğiyle mobil kayıt eklendi. İlaç formları, günlük doz, stok ve geçmiş ekranları Phase 7'de devam edecek. Bildirim Phase 8, offline DB/sync Phase 9, privacy/hardening Phase 10, yayın paketi Phase 11. iOS için tam Xcode/CocoaPods ve cihaz doğrulaması henüz yoktur; iOS derlemesi yapıldığı iddia edilmez. Android emülatörü fiziksel cihaz testi yerine geçmez.
 
 ## Şimdiye kadar tamamlananlar
 
@@ -40,3 +40,10 @@ Komutlar, fixture davranışı ve güvenlik ayrıntıları [mobil README](../mob
 | 6 | Android Flutter temeli, Riverpod, güvenli session, routing, Türkçe login ve aktif ilaç listesi |
 
 Phase 5 sonunda backend'de 106 test ve GitHub CI başarılıydı. Bu faz backend davranışını değiştirmedi. Sonraki ürün adımı Phase 7'dir; tamamlanmış bir online mobil MVP iddiası henüz yoktur.
+
+
+## Kullanıcı isteği — mobil kayıt ekranı, 23 Ekim 2026
+
+Kullanıcının “sign up kısmı oluşturup androidi tekrar aç” isteğiyle `/register` rotası ve giriş ekranından erişim eklendi. E-posta, şifre/tekrar ve değiştirilebilir IANA saat dilimi formu backend register API'sini kullanır. Şifre min 12 karakter / max 72 UTF-8 byte; kayıt sonrası giriş ekranında başarı mesajı, alan/mükerrer/ağ hatalarında güvenli hata görünümü. Register otomatik login yapmaz; mevcut backend sözleşmesi korunur.
+
+Mobil test toplamı 20 oldu. Gerçek backend/emülatör entegrasyon testi artık kayıt ekranından hesap oluşturmayı da kapsar. Android uygulaması yeniden derlenip emülatörde açılır. Backend davranışı değişmedi.

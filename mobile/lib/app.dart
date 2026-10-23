@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import 'features/auth/session.dart';
 import 'features/auth/login_screen.dart';
+import 'features/auth/register_screen.dart';
 import 'features/medications/medication_list_screen.dart';
 import 'shared/design.dart';
 
@@ -16,6 +17,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     redirect: (context, state) {
       final status = ref.read(sessionProvider).status;
+      if (status == SessionStatus.signedOut && state.uri.path == '/register') {
+        return null;
+      }
       final target = switch (status) {
         SessionStatus.loading || SessionStatus.unavailable => '/startup',
         SessionStatus.signedOut => '/login',
@@ -26,6 +30,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/startup', builder: (_, _) => const StartupScreen()),
       GoRoute(path: '/login', builder: (_, _) => const LoginScreen()),
+      GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
       GoRoute(
         path: '/medications',
         builder: (_, _) => const MedicationListScreen(),

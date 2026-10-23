@@ -1,6 +1,6 @@
 # MedTrack mobil — Phase 6
 
-Android öncelikli, Türkçe Flutter istemcisi. Phase 6 kapsamı: giriş, güvenli oturum, korumalı yönlendirme ve aktif ilaç listesi. Riverpod seçimi kullanıcı tarafından 23 Ekim 2026'da onaylandı. Formlar, günlük doz/stock/history ekranları Phase 7'de; bildirimler Phase 8'de, yerel DB/offline sync Phase 9'da.
+Android öncelikli, Türkçe Flutter istemcisi. Phase 6 kapsamı: giriş, güvenli oturum, korumalı yönlendirme ve aktif ilaç listesi. Kullanıcının 23 Ekim 2026 tarihli isteğiyle mobil kayıt ekranı da eklendi. Riverpod seçimi kullanıcı tarafından 23 Ekim 2026'da onaylandı. Formlar, günlük doz/stock/history ekranları Phase 7'de; bildirimler Phase 8'de, yerel DB/offline sync Phase 9'da.
 
 ## Çalıştırma
 
@@ -35,7 +35,7 @@ flutter run --dart-define=API_BASE_URL=https://YOUR_HOST/api/v1
 
 URL `/api/v1` ile, sonunda `/` olmadan bitmeli; parola/token/query içeremez. HTTP yalnız debug ve `10.0.2.2`/`127.0.0.1`/`localhost` için kabul edilir. Release için HTTPS zorunlu; yayın imzası/mağaza paketi bu fazın kapsamı değildir. Backend CORS ayarı mobil native HTTP için gerekmez.
 
-İlk hesap, yerel [Swagger](http://localhost:8080/swagger-ui/index.html) üzerinden `/auth/register` ile oluşturulur. Mobil kayıt ekranı bu fazın çıkış kapısında bulunmaz. Gerçek hasta verisi kullanma. Mevcut hesabın e-posta ve şifresiyle mobil giriş yap; ilaç yoksa boş liste gösterilir. Bu fazda ilaç eklemek için Swagger `/medications` kullanılır.
+Giriş ekranındaki **Hesabın yok mu? Kayıt ol** bağlantısıyla hesap oluşturulur. E-posta, en az 12 karakterli şifre, şifre tekrarı ve saat dilimi istenir. Varsayılan `Europe/Istanbul` değiştirilebilir; IANA bölgesini backend doğrular. Şifre UTF-8 olarak en fazla 72 byte olabilir. Başarılı kayıt otomatik oturum açmaz; giriş ekranına dönerek başarı mesajı gösterir. Mükerrer hesap/alan/ağ hataları güvenli mesajlarla sunulur. Gerçek hasta verisi kullanma. Bu fazda ilaç eklemek için yerel [Swagger](http://localhost:8080/swagger-ui/index.html) `/medications` kullanılır.
 
 ## Yapı ve güvenlik davranışı
 

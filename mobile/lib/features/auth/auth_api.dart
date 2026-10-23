@@ -4,6 +4,18 @@ import '../../core/token_store.dart';
 class AuthApi {
   const AuthApi(this.api);
   final ApiClient api;
+  Future<void> register(String email, String password, String timezone) async {
+    await api.request(
+      'POST',
+      '/auth/register',
+      body: {
+        'email': email.trim(),
+        'password': password,
+        'timezone': timezone.trim(),
+      },
+    );
+  }
+
   Future<Tokens> login(String email, String password) async => Tokens.fromJson(
     await api.request(
       'POST',
